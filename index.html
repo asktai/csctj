@@ -1,0 +1,1520 @@
+<!--
+版本号：V2.2.0（分享修复版）
+作者：芭比娃娃的爸比
+更新说明（V2.1.7 → V2.2.0）：
+1. [UI] 自定义题型改为分类折叠布局，优化视觉体验
+2. [UX] 分享功能智能判断：未答题显示邀请文案，已答题显示真实成绩
+3. [Fix] 分享链接固定使用在线版地址，避免本地文件路径无法访问问题
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#66BB6A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="green-translucent">
+    <meta name="description" content="竹小苗计算出题机 V2.2.0 - 专为小学生设计的数学练习工具，支持竖式脱式计算，可离线使用">
+    <title>竹小苗计算出题机 V2.2.0</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIuebiueBsOacieacn-W4iOW5v+WvhueggSIsICJzaG9ydF9uYW1lIjogIuebiueBsOacieacn-IiwICJzdGFydF91cmwiOiAiLiIsICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLCAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjFmOGU5IiwgInRoZW1lX2NvbG9yIjogIiM2NkJCNkEiLCAiaWNvbnMiOiBbeyJzcmMtc2V0IjogImh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9ucG0vQG1vcmdodWwvZmVhdGhlcnwxL2Rpc3QvZmVhdGhlci5zdmcifV19">
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/@morgul/feather@1/dist/feather.svg">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2-fix@0.0.1/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root{--bamboo-primary:#66BB6A;--bamboo-dark:#388E3C;--bamboo-light:#C8E6C9;--bamboo-bg:#E8F5E9;--accent-orange:#F57C00;--accent-blue:#1976D2;--warning-red:#D32F2F;--multi-select-red:#d32f2f;--card-bg:#ffffff;--text-primary:#333333;--text-secondary:#666666;--shadow:0 2px 8px rgba(0,0,0,0.08);--border-radius:12px}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#f1f8e9 0%,#e8f5e9 100%);min-height:100vh;overflow-x:hidden;color:var(--text-primary);position:relative}
+        .bamboo-leaf{position:fixed;top:-60px;font-size:20px;color:rgba(102,187,106,0.12);opacity:0.4;pointer-events:none;z-index:1;animation:fall linear infinite;text-shadow:0 0 2px rgba(255,255,255,0.3)}
+        @keyframes fall{0%{transform:translateY(-60px) rotate(0deg) translateX(0);opacity:0}10%{opacity:0.4}90%{opacity:0.4}100%{transform:translateY(100vh) rotate(360deg) translateX(20px);opacity:0}}
+        .container{max-width:1200px;margin:0 auto;padding:8px;position:relative;z-index:10}
+        .header{background:linear-gradient(135deg,var(--bamboo-primary) 0%,var(--bamboo-dark) 100%);color:white;padding:15px;border-radius:var(--border-radius);text-align:center;box-shadow:var(--shadow);margin-bottom:10px;position:relative;overflow:hidden}
+        .header::before{content:"🎋";position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:32px;opacity:0.2}
+        .header::after{content:"🌱";position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:32px;opacity:0.2}
+        .main-title{font-size:clamp(20px,4vw,28px);font-weight:bold;text-shadow:1px 1px 2px rgba(0,0,0,0.2);margin:0}
+        .marquee-container{background:rgba(255,255,255,0.95);border-radius:var(--border-radius);padding:12px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden;height:70px;position:relative;border-left:4px solid var(--accent-orange)}
+        .marquee-content{position:absolute;width:auto;animation:scroll 85s linear infinite;white-space:nowrap}
+        @keyframes scroll{0%{transform:translateX(0%)}100%{transform:translateX(-50%)}}
+        .marquee-text{display:inline-block;font-size:15px;line-height:1.6;color:var(--text-primary);padding:3px 50px 3px 0;white-space:nowrap;font-weight:500}
+        .info-panel{background:rgba(255,255,255,0.95);border-radius:var(--border-radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);display:grid;grid-template-columns:60px 1fr 60px;gap:10px;align-items:center;border-left:4px solid var(--accent-blue)}
+        .qr-code{width:50px;height:50px;background:#f5f5f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb;border:1px dashed var(--bamboo-light);overflow:hidden}
+        #qrcodeCanvas{width:50px;height:50px}
+        .info-center{text-align:center}
+        .info-item{margin:6px 0;font-size:15px;color:#2E7D32;line-height:1.6;font-weight:500;letter-spacing:0.3px}
+        .info-item a{color:#1976D2;text-decoration:none;font-weight:600;transition:all 0.3s;border-bottom:1px dotted #1976D2;padding-bottom:1px}
+        .info-item a:hover{color:#0D47A1;border-bottom-style:solid;text-shadow:0 0 8px rgba(25,118,210,0.2)}
+        .card{background:var(--card-bg);border-radius:var(--border-radius);padding:15px;margin-bottom:10px;box-shadow:var(--shadow);border-top:3px solid var(--bamboo-primary)}
+        .card-title{font-size:18px;color:var(--bamboo-dark);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:bold;padding-bottom:8px;border-bottom:2px solid var(--bamboo-light)}
+        .btn{background:linear-gradient(135deg,var(--bamboo-primary) 0%,var(--bamboo-dark) 100%);color:white;border:none;padding:10px 20px;border-radius:10px;font-size:15px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;font-weight:bold;touch-action:manipulation;flex:1;min-width:0;white-space:nowrap}
+        .btn:hover{transform:scale(1.03) translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.15)}
+        .btn:active{transform:translateY(2px) scale(1);box-shadow:0 1px 2px rgba(0,0,0,0.1)}
+        .btn-blue{background:linear-gradient(135deg,#2196F3 0%,#1976D2 100%)}
+        .btn-blue:hover{transform:scale(1.02);box-shadow:0 4px 8px rgba(25,118,210,0.3)}
+        .btn-secondary{background:linear-gradient(135deg,#FF8F00 0%,#E65100 100%);color:white}
+        .btn-secondary:hover{transform:scale(1.02);box-shadow:0 4px 8px rgba(230,81,0,0.3)}
+        .btn-danger{background:linear-gradient(135deg,#E53935 0%,#C62828 100%);color:white}
+        .btn-danger:hover{transform:scale(1.02);box-shadow:0 4px 8px rgba(198,40,40,0.3)}
+        .btn-wechat{background:linear-gradient(135deg,#07C160 0%,#05a350 100%)}
+        .btn-wechat:hover{transform:scale(1.02);box-shadow:0 4px 12px rgba(7,193,96,0.3)}
+        .btn-reset{background:linear-gradient(135deg,#FFF9C4 0%,#FFF176 100%);color:#C62828;border:2px solid #FBC02D;padding:8px 16px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 2px 4px rgba(0,0,0,0.1);white-space:nowrap;flex-shrink:0}
+        .btn-reset:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 4px 8px rgba(251,192,45,0.4);background:linear-gradient(135deg,#FFF176 0%,#FFEE58 100%);border-color:#F9A825}
+        .btn-reset:active{transform:translateY(0) scale(0.98);box-shadow:0 1px 2px rgba(0,0,0,0.1)}
+        .btn-row-compact{display:flex;gap:8px;flex-wrap:wrap !important;margin-top:12px;width:100%}
+        .btn-row-compact .btn{flex:1 1 0;min-width:0;padding:10px 4px;font-size:clamp(11px,3.2vw,14px);letter-spacing:-0.3px}
+        .input-group{margin-bottom:12px}
+        .input-label{display:block;margin-bottom:6px;font-weight:bold;color:var(--bamboo-dark);font-size:14px}
+        .input-field{width:100%;padding:12px;border:2px solid var(--bamboo-light);border-radius:10px;font-size:16px;transition:all 0.3s;background:white}
+        .input-field:focus{outline:none;border-color:var(--bamboo-primary);box-shadow:0 0 0 2px rgba(129,199,132,0.15)}
+        .multi-switch{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--multi-select-red);cursor:pointer;font-weight:700;margin-left:5px;margin-right:5px;padding:4px 8px;border-radius:6px;transition:all 0.3s}
+        .multi-switch:hover{box-shadow:0 0 8px rgba(211,47,47,0.4);background:rgba(211,47,47,0.05)}
+        .multi-switch input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--multi-select-red)}
+        .multi-hint{color:var(--multi-select-red);font-weight:700;font-size:13px;margin-left:5px}
+        .selection-header{display:flex;justify-content:flex-start;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+        .number-control{display:flex;align-items:center;gap:10px;justify-content:flex-start}
+        .control-btn-square{width:42px;height:42px;border-radius:10px;border:none;font-size:20px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-weight:bold;flex-shrink:0}
+        .control-btn-square:hover{transform:scale(1.05);box-shadow:0 3px 6px rgba(0,0,0,0.15)}
+        .control-btn-square:active{transform:translateY(2px) scale(1);box-shadow:0 1px 2px rgba(0,0,0,0.1)}
+        .control-btn-minus{background:linear-gradient(135deg,#ff8a80 0%,#ff5252 100%);color:white}
+        .control-btn-plus{background:linear-gradient(135deg,#69f0ae 0%,#00e676 100%);color:white}
+        .control-value-input{min-width:90px;height:42px;text-align:center;font-size:18px;font-weight:bold;color:var(--accent-blue);background:var(--bamboo-bg);border-radius:10px;border:2px solid var(--bamboo-light);display:flex;align-items:center;justify-content:center;padding:0 10px}
+        .control-value-input input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-size:18px;font-weight:bold;color:var(--accent-blue);outline:none}
+        .range-hint{color:var(--warning-red);font-size:12px;font-weight:600;margin-left:8px;display:inline-flex;align-items:center;gap:4px}
+        .option-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+        .checkbox-item{display:flex;align-items:center;padding:10px;background:var(--bamboo-bg);border-radius:8px;cursor:pointer;transition:all 0.2s;border:2px solid transparent;font-size:14px}
+        .checkbox-item:hover{background:#c8e6c9;transform:translateY(-2px);box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+        .checkbox-item.selected{background:var(--bamboo-primary);color:white;border-color:var(--bamboo-dark);box-shadow:var(--shadow)}
+        .checkbox-item input{display:none}
+        .checkbox-icon{margin-right:6px;font-size:18px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px}
+        .selector-group{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+        .selector-btn{flex:1;min-width:80px;padding:10px 6px;border:2px solid var(--bamboo-light);background:white;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;font-weight:bold;font-size:13px}
+        .selector-btn:hover{transform:scale(1.02);box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+        .selector-btn.active{transform:scale(1.02);box-shadow:var(--shadow)}
+        .selector-btn.easy{border-color:#C8E6C9;color:#388E3C}
+        .selector-btn.easy.active{background:#81C784;color:white;border-color:#66BB6A}
+        .selector-btn.medium{border-color:#FFCC80;color:#EF6C00}
+        .selector-btn.medium.active{background:#FFB74D;color:white;border-color:#F57C00}
+        .selector-btn.hard{border-color:#EF9A9A;color:#C62828}
+        .selector-btn.hard.active{background:#E57373;color:white;border-color:#D32F2F}
+        .selector-btn.positive{border-color:#C8E6C9;color:#388E3C}
+        .selector-btn.positive.active{background:#81C784;color:white;border-color:#66BB6A}
+        .selector-btn.negative{border-color:#EF9A9A;color:#C62828}
+        .selector-btn.negative.active{background:#E57373;color:white;border-color:#D32F2F}
+        .print-header{display:none;background:linear-gradient(135deg,#f1f8e9 0%,#e8f5e9 100%);border:2px solid var(--bamboo-primary);border-radius:14px;padding:20px 24px;margin-bottom:24px;box-shadow:0 4px 12px rgba(102,187,106,0.12);page-break-inside:avoid}
+        .print-header.visible{display:block}
+        .print-header-line{display:flex;align-items:baseline;margin-bottom:15px;white-space:nowrap;overflow:hidden}
+        .print-header-line:first-child{margin-bottom:55px;padding-bottom:4px;border-bottom:1px dashed rgba(102,187,106,0.2);justify-content:center;padding-left:0}
+        .print-header-line:last-child{margin-bottom:0}
+        .print-title-main{font-size:clamp(24px,5vw,34px);font-weight:bold;color:#1B5E20;text-align:center;letter-spacing:3px;text-shadow:2px 2px 4px rgba(0,0,0,0.08);padding-bottom:4px}
+        .print-info-row{display:flex;justify-content:flex-start;align-items:baseline;width:100%;gap:20px;font-size:clamp(13px,3vw,16px);padding-left:20px;flex-wrap:wrap}
+        .print-info-item{display:flex;align-items:baseline;justify-content:flex-start;gap:8px;min-width:120px}
+        .print-label{color:#555;font-weight:600;flex-shrink:0}
+        .print-underline{flex:0 0 auto;min-width:80px;border-bottom:2px solid #333;margin:0 4px;height:1.5em;display:inline-flex;align-items:center;justify-content:flex-start;color:var(--bamboo-dark);font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px;font-size:1.1em;letter-spacing:1px}
+        #printScore{color:#D32F2F !important;font-weight:bold}
+        .print-meta-row{display:flex;align-items:center;justify-content:center;gap:15px;font-size:clamp(12px,2.8vw,14px);color:#666;background:rgba(255,255,255,0.6);padding:6px 12px;border-radius:20px;border:1px dashed var(--bamboo-primary);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+        .print-meta-row::-webkit-scrollbar{display:none}
+        .print-meta-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
+        .print-meta-label{color:#888}
+        .print-meta-value{color:var(--bamboo-dark);font-weight:600}
+        .question-area{background:linear-gradient(135deg,#fafafa 0%,#f5f5f5 100%);border-radius:var(--border-radius);padding:16px;margin-bottom:12px;border:2px solid #e8f5e9;box-shadow:inset 0 1px 3px rgba(0,0,0,0.02)}
+        .question-grid{display:grid;gap:12px}
+        .question-grid.col-1{grid-template-columns:1fr}
+        .question-grid.col-2{grid-template-columns:repeat(2,1fr)}
+        .question-grid.col-3{grid-template-columns:repeat(3,1fr)}
+        .question-grid.col-4{grid-template-columns:repeat(4,1fr)}
+        .question-item{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;background:linear-gradient(135deg,#f1f8e9 0%,#ffffff 100%);border-radius:12px;font-family:"Courier New","Consolas",monospace;break-inside:avoid;page-break-inside:avoid;line-height:1.5;border:2px solid #e8f5e9;transition:all 0.3s ease;position:relative;box-shadow:0 2px 8px rgba(102,187,106,0.08)}
+        .question-item:hover{border-color:#81C784;box-shadow:0 4px 12px rgba(102,187,106,0.15);transform:translateY(-2px);background:linear-gradient(135deg,#e8f5e9 0%,#ffffff 100%)}
+        .question-content{flex:1;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+        .question-number{color:#2E7D32;font-weight:bold;font-size:1em;flex-shrink:0;min-width:32px;background:rgba(200,230,201,0.5);padding:2px 6px;border-radius:6px;text-align:center;display:inline-flex;align-items:center;justify-content:center}
+        .question-text{flex:1;font-weight:600;color:#333;letter-spacing:0.8px;font-size:clamp(16px,2.3vw,19px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 1px rgba(0,0,0,0.02)}
+        .answer-section{display:flex;align-items:center;gap:6px;flex-shrink:0}
+        .answer-input{width:90px;padding:10px 8px;border:2.5px solid #C8E6C9;border-radius:10px;text-align:center;font-size:clamp(17px,2.5vw,21px);font-weight:bold;color:var(--accent-blue);background:linear-gradient(135deg,#ffffff 0%,#f5f5f5 100%);font-family:"Courier New",monospace;transition:all 0.25s ease;min-height:44px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.03)}
+        .answer-input:focus{outline:none;border-color:#2196F3;box-shadow:0 0 0 4px rgba(33,150,243,0.12),0 4px 8px rgba(33,150,243,0.1);transform:scale(1.03);background:#ffffff}
+        .answer-input.correct{background:#e8f5e9;border-color:#81C784;color:#2E7D32}
+        .answer-input.wrong{background:#ffebee;border-color:#E57373;color:#c62828}
+        .result-icon{font-size:22px;margin-left:4px;flex-shrink:0;display:flex;align-items:center}
+        .correct-answer{color:#D32F2F;font-size:15px;font-weight:bold;margin-left:6px;font-family:"Courier New",monospace;background:rgba(255,205,210,0.3);padding:2px 6px;border-radius:4px;border:1px solid rgba(211,47,47,0.2)}
+        .icon-correct{color:#00C853;font-size:26px;font-weight:bold;text-shadow:0 0 16px rgba(0,200,83,0.6);animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:rgba(0,200,83,0.1);border-radius:50%}
+        .icon-wrong{color:#FF1744;font-size:26px;font-weight:bold;text-shadow:0 0 16px rgba(255,23,68,0.6);animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:rgba(255,23,68,0.08);border-radius:50%}
+        @keyframes popIn{0%{transform:scale(0) rotate(-45deg);opacity:0}60%{transform:scale(1.3) rotate(10deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
+        .question-item.multi-line{flex-direction:column;align-items:stretch;padding:16px;background:linear-gradient(135deg,#f9fbe7 0%,#ffffff 100%);border-color:#DCEDC8}
+        .question-item.multi-line .question-content{flex-direction:column;align-items:flex-start;gap:10px;width:100%}
+        .question-item.multi-line .question-text{white-space:normal;word-break:break-all;width:100%;font-size:clamp(14px,2.5vw,17px);line-height:1.5}
+        .question-item.multi-line .answer-section{width:100%;justify-content:flex-start;padding-left:36px}
+        .question-item.multi-line .answer-input{width:100%;max-width:200px;min-height:44px}
+        
+        /* 单题模式水平布局优化 */
+        .single-question-mode{text-align:center;padding:20px 15px;position:relative}
+        .single-question-horizontal{display:flex;align-items:center;justify-content:center;gap:15px;flex-wrap:wrap;margin:25px 0;padding:20px;background:linear-gradient(135deg,#f1f8e9 0%,#ffffff 50%,#f1f8e9 100%);border-radius:16px;border:3px solid #C8E6C9;box-shadow:0 4px 12px rgba(102,187,106,0.1)}
+        .question-display-h{flex:1;min-width:200px;text-align:right;font-size:clamp(28px,5vw,42px);color:#2E7D32;font-weight:bold;font-family:"Courier New",monospace;letter-spacing:3px;line-height:1.4;word-break:break-all;text-shadow:2px 2px 4px rgba(0,0,0,0.05)}
+        .question-input-h{flex:0 0 auto;display:flex;align-items:center}
+        .question-input-h .answer-input{width:140px;font-size:clamp(28px,4vw,36px);padding:15px;min-height:60px;border-width:3px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,0.08),inset 0 2px 4px rgba(0,0,0,0.03)}
+        .question-input-h .answer-input:focus{transform:scale(1.05)}
+        .question-result-h{flex:0 0 auto;min-width:100px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px}
+        .single-result-inline{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:bold;padding:12px 20px;border-radius:12px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+        .single-result-inline.correct{color:#00C853;border:2px solid #00C853;background:#e8f5e9}
+        .single-result-inline.wrong{color:#FF1744;border:2px solid #FF1744;background:#ffebee}
+        .single-result-answer{font-size:16px;color:#666;font-weight:normal}
+        
+        @media(max-width:768px){
+            .single-question-horizontal{flex-direction:column;gap:20px;padding:15px}
+            .question-display-h{text-align:center;width:100%;font-size:clamp(24px,6vw,32px)}
+            .question-input-h{width:100%;justify-content:center}
+            .question-input-h .answer-input{width:200px;max-width:80%}
+            .question-result-h{width:100%;align-items:center}
+        }
+        
+        .single-navigation{display:flex;justify-content:center;gap:15px;margin-top:25px;padding:15px;background:var(--bamboo-bg);border-radius:10px;flex-wrap:wrap}
+        .floating-timer{position:fixed;top:100px;right:20px;width:140px;background:rgba(255,255,255,0.75);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:10px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:9999;cursor:move;user-select:none;border:1px solid rgba(255,255,255,0.5);transition:transform 0.2s,box-shadow 0.2s;animation:float-around 6s ease-in-out infinite}
+        @keyframes float-around{0%,100%{transform:translate(0,0)}25%{transform:translate(-10px,6px)}50%{transform:translate(-5px,-10px)}75%{transform:translate(10px,-5px)}}
+        .floating-timer:hover{background:rgba(255,255,255,0.9);box-shadow:0 4px 12px rgba(0,0,0,0.15);animation-play-state:paused;transform:scale(1.05)}
+        .floating-timer.dragging{animation-play-state:paused;cursor:grabbing;opacity:0.7}
+        .timer-header{display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:14px;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:6px}
+        .timer-icon-main{font-size:18px;margin-right:4px}
+        .timer-title{font-weight:bold;color:#555;font-size:13px}
+        .timer-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0}
+        .timer-label-small{font-size:11px;font-weight:bold;display:flex;align-items:center;gap:3px}
+        .timer-value{font-family:'Courier New',monospace;font-size:15px;font-weight:bold;letter-spacing:0.5px}
+        .timer-current .timer-label-small{color:#1976D2}
+        .timer-current .timer-value{color:#2196F3}
+        .timer-total-row .timer-label-small{color:#E65100}
+        .timer-total-row .timer-value{color:#FF6F00}
+        .drag-hint{text-align:center;font-size:9px;color:rgba(244,67,54,0.7);margin-top:6px;font-weight:bold;letter-spacing:0.5px}
+        .student-info-card{background:linear-gradient(135deg,#fffde7 0%,#fff9c4 100%);border-radius:var(--border-radius);padding:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(245,124,0,0.1);border:2.5px solid #FFB74D}
+        .student-info-header{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+        .info-field{display:flex;flex-direction:column;gap:4px}
+        .info-field label{font-weight:bold;color:var(--bamboo-dark);font-size:12px}
+        .custom-select-wrapper{position:relative;width:100%}
+        .custom-select{width:100%;padding:8px;border:2px solid var(--bamboo-light);border-radius:6px;font-size:14px;background:white;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2381C784' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 8px center;background-size:16px;padding-right:30px}
+        .custom-select:focus{outline:none;border-color:var(--bamboo-primary)}
+        .encouragement-box{margin-top:12px;padding:12px;background:rgba(255,255,255,0.7);border-radius:8px;border-left:3px solid var(--bamboo-primary);font-size:14px;color:#555;font-style:italic;text-align:center}
+        .result-panel{display:none;background:white;border-radius:var(--border-radius);padding:15px;margin-bottom:10px;box-shadow:var(--shadow);border-top:3px solid var(--accent-orange);border-bottom:3px solid var(--accent-orange)}
+        .result-panel.visible{display:block;animation:slideDown 0.4s ease-out}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+        .score-display{text-align:center;padding:20px;background:linear-gradient(135deg,#fff8e1 0%,#ffecb3 100%);border-radius:12px;border:2px dashed #ffb74d}
+        .score-value{font-size:52px;font-weight:bold;margin:15px 0;letter-spacing:3px;text-shadow:3px 3px 6px rgba(0,0,0,0.15);transition:all 0.3s ease}
+        .score-value.perfect{color:#00C853;text-shadow:0 0 25px rgba(0,200,83,0.6);animation:glow 1.5s ease-in-out infinite alternate}
+        .score-value.good{color:#2979FF;text-shadow:0 0 20px rgba(41,121,255,0.5)}
+        .score-value.pass{color:#FF9100;text-shadow:0 0 20px rgba(255,145,0,0.5)}
+        .score-value.fail{color:#FF1744;text-shadow:0 0 20px rgba(255,23,68,0.5)}
+        @keyframes glow{from{text-shadow:0 0 20px rgba(0,200,83,0.4)}to{text-shadow:0 0 30px rgba(0,200,83,0.8),0 0 40px rgba(0,200,83,0.4)}}
+        .emoji-feedback{font-size:64px;margin:10px 0;animation:bounce 1s ease infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.2))}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .timer-stats{font-size:16px;color:var(--warning-red);font-weight:bold;margin-top:10px;padding:8px;background:rgba(211,47,47,0.08);border-radius:8px;display:inline-block;font-family:'Courier New',monospace;letter-spacing:0.5px}
+        .celebration{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2000;overflow:hidden}
+        .confetti{position:absolute;width:8px;height:8px;background:#f00;animation:confetti-fall 3s linear forwards}
+        @keyframes confetti-fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+        .action-buttons-panel{background:linear-gradient(135deg,#ffffff 0%,#f1f8e9 100%);border-radius:var(--border-radius);padding:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(102,187,106,0.12);border:2px solid #C8E6C9}
+        .action-title{font-size:16px;color:var(--bamboo-dark);margin-bottom:12px;text-align:center;font-weight:bold;display:flex;align-items:center;justify-content:center;gap:6px;padding-bottom:8px;border-bottom:1px dashed var(--bamboo-light)}
+        .settings-inner{background:rgba(129,199,132,0.08);border-radius:10px;padding:15px;margin-top:10px;border:1px dashed var(--bamboo-light)}
+        .divider-section{margin-top:15px;border-top:2px dashed var(--bamboo-light);padding-top:12px}
+        .tabs{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;border-bottom:2px solid var(--bamboo-bg);padding-bottom:8px}
+        .tab-group{display:flex;gap:8px;flex:1}
+        .tab{padding:10px 18px;background:var(--bamboo-bg);border:none;border-radius:8px 8px 0 0;cursor:pointer;font-weight:bold;color:var(--text-secondary);transition:all 0.2s;font-size:14px}
+        .tab.active{background:var(--bamboo-primary);color:white}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+        .progress-bar{width:100%;max-width:250px;height:8px;background:#e0e0e0;border-radius:4px;margin:20px auto 0;overflow:hidden}
+        .progress-fill{height:100%;background:var(--bamboo-primary);transition:width 0.3;border-radius:4px}
+        .keyboard-shortcuts{position:fixed;bottom:20px;left:20px;background:rgba(255,255,255,0.95);padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-size:11px;color:#666;z-index:100;border:1px solid var(--bamboo-light);max-width:200px}
+        .keyboard-shortcuts kbd{background:#eee;padding:2px 4px;border-radius:3px;border:1px solid #ccc;font-family:monospace;font-size:10px}
+        @media (max-width:768px){.keyboard-shortcuts{display:none}}
+        @media print{@page{margin:1cm;size:A4}body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12pt}body *{visibility:hidden}.print-area,.print-area *{visibility:visible}.print-area{position:absolute;left:0;top:0;width:100%;margin:0;padding:0;box-shadow:none;border:none;background:white}.no-print,.floating-timer,.bamboo-leaf,.keyboard-shortcuts{display:none !important;visibility:hidden !important}.print-header{display:block !important;visibility:visible !important;background:linear-gradient(135deg,#f1f8e9 0%,#e8f5e9 100%) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-bottom:15px;border:2px solid #388E3C !important;page-break-inside:avoid;break-inside:avoid}.print-header-line:first-child{margin-bottom:58px;border-bottom:1px solid rgba(56,142,60,0.2);justify-content:center;padding-left:0}.print-title-main{font-size:24pt;color:#1B5E20 !important}.print-info-row{font-size:14pt}.print-underline{border-bottom:1.5pt solid #000 !important;min-width:80px}#printScore{color:#D32F2F !important}.print-meta-row{font-size:11pt;background:rgba(200,230,201,0.3) !important;border:1px dashed #66BB6A !important}.question-grid{display:grid !important;gap:10px !important;width:100% !important}.question-grid.col-1{grid-template-columns:1fr !important}.question-grid.col-2{grid-template-columns:repeat(2,1fr) !important}.question-grid.col-3{grid-template-columns:repeat(3,1fr) !important}.question-grid.col-4{grid-template-columns:repeat(4,1fr) !important}.question-item{break-inside:avoid !important;page-break-inside:avoid !important;border:1px solid #ddd !important;background:#fafafa !important;padding:10px !important;font-size:12pt !important}.question-item.multi-line{page-break-inside:avoid}.answer-input{border:1.5pt solid #999 !important;background:white !important;color:#333 !important;width:70pt;min-height:28pt;font-size:12pt !important}.question-item.multi-line .answer-input{width:100% !important;max-width:150pt}.btn,.single-navigation,.result-panel,.student-info-card,.action-buttons-panel{display:none !important}.card-title{font-size:14pt;margin-bottom:10px;color:#2E7D32 !important}.result-icon{display:none !important}.correct-answer{display:none !important}.single-question-horizontal{border:2pt solid #388E3C !important;background:#f1f8e9 !important}}
+        @media (max-width:768px){.container{padding:5px}.info-panel{grid-template-columns:1fr;text-align:center;padding:12px}.qr-code{display:flex;justify-content:center;margin:0 auto}.tabs{flex-wrap:wrap;gap:6px}.tab-group{width:100%;justify-content:flex-start}.btn-reset{padding:6px 12px;font-size:13px;margin-left:auto}.question-grid.col-4{grid-template-columns:repeat(2,1fr)}.question-grid.col-3{grid-template-columns:repeat(2,1fr)}.question-item{padding:10px 8px}.question-content{gap:6px}.question-text{font-size:15px}.answer-input{width:65px;min-height:36px;font-size:16px;padding:6px 4px}.print-header{padding:12px}.print-header-line:first-child{margin-bottom:12px;justify-content:center;padding-left:0}.print-info-row{gap:8px;font-size:13px}.print-underline{min-width:50px}.option-grid{grid-template-columns:repeat(2,1fr)}.btn-row-compact{gap:5px}.btn-row-compact .btn{padding:8px 2px;font-size:clamp(10px,3vw,13px)}.floating-timer{width:120px;padding:8px;border-radius:12px;top:80px;right:10px}.control-btn-square{width:38px;height:38px;font-size:18px}.control-value-input{min-width:70px;height:38px;font-size:16px}.student-info-header{grid-template-columns:1fr}.marquee-container{height:60px}.multi-switch{font-size:13px;padding:2px 6px}.range-hint{font-size:11px;margin-left:0;margin-top:4px;display:block}.timer-stats{font-size:14px}}
+        @media (max-width:480px){.question-grid.col-2,.question-grid.col-3,.question-grid.col-4{grid-template-columns:1fr}.question-item{flex-direction:column}.question-content{width:100%;flex-wrap:wrap}.question-text{font-size:16px;white-space:normal;word-break:break-all;width:100%}.answer-section{width:100%;justify-content:flex-start;margin-top:8px;padding-left:36px}.answer-input{width:100%;max-width:200px}.main-title{font-size:20px}.header::before,.header::after{display:none}.print-info-row{flex-direction:column;align-items:flex-start;gap:6px}.print-info-item{width:100%;justify-content:flex-start}.print-underline{flex:0 0 auto}.print-header-line:first-child{margin-bottom:10px;justify-content:center;padding-left:0}.selector-btn{min-width:70px;padding:8px 4px;font-size:12px}.btn-row-compact .btn{font-size:clamp(9px,2.8vw,12px);padding:6px 1px}.range-hint{font-size:10px}.timer-stats{font-size:13px;padding:6px}}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:3000}.modal-overlay.active{display:flex}.modal-content{background:white;padding:25px;border-radius:var(--border-radius);max-width:90%;max-height:80vh;overflow-y:auto;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.3)}.modal-title{font-size:20px;color:var(--bamboo-dark);margin-bottom:15px}.hidden{display:none !important}.cdn-error-banner{background:linear-gradient(135deg,#ffebee 0%,#ffcdd2 100%);border:2px solid #e53935;border-radius:12px;padding:15px;margin-bottom:10px;text-align:center;color:#c62828;font-weight:bold}.cdn-error-banner button{margin-top:8px;background:#e53935;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer}.download-hint{font-size:11px;color:#666;text-align:center;margin-top:8px;font-style:italic}
+        .vertical-calc{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:"Courier New",monospace;line-height:1.4;padding:8px 12px;background:rgba(255,255,255,0.8);border-radius:8px;border:2px solid #C8E6C9;margin:4px 0}
+        .v-num{font-size:18px;font-weight:bold;color:#333;letter-spacing:2px}
+        .v-op{font-size:18px;font-weight:bold;color:#1976D2;letter-spacing:2px;border-bottom:2px solid #333;padding-bottom:4px;margin-bottom:4px}
+        .v-line{display:none}
+        .v-ans{min-height:24px}.fraction{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 8px}
+        .fraction-num{font-size:20px;font-weight:bold;color:#333;padding:2px 8px;min-width:24px;text-align:center}
+        .fraction-line{width:100%;height:2px;background:#333;margin:2px 0}
+        .fraction-den{font-size:20px;font-weight:bold;color:#333;padding:2px 8px;min-width:24px;text-align:center}
+        .fraction-op{font-size:24px;font-weight:bold;color:#1976D2;margin:0 8px;vertical-align:middle}
+        .fraction-eq{font-size:24px;font-weight:bold;color:#333;margin:0 8px;vertical-align:middle}
+        .fraction-input-group{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin-left:10px}
+        .fraction-input{width:50px;height:32px;text-align:center;font-size:18px;font-weight:bold;color:var(--accent-blue);border:2.5px solid #C8E6C9;border-radius:8px;margin:2px 0;background:linear-gradient(135deg,#ffffff 0%,#f5f5f5 100%)}
+        .fraction-input:focus{outline:none;border-color:#2196F3;box-shadow:0 0 0 3px rgba(33,150,243,0.12)}
+        .fraction-row{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;line-height:2}
+        
+        /* 折叠面板新样式 */
+        .type-category{margin-bottom:8px;border:2px solid var(--bamboo-light);border-radius:10px;overflow:hidden;background:white;transition:all 0.3s ease}
+        .type-category-header{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;background:linear-gradient(135deg,#f1f8e9 0%,#e8f5e9 100%);cursor:pointer;transition:all 0.2s;font-weight:bold;color:var(--bamboo-dark);font-size:15px}
+        .type-category-header:hover{background:linear-gradient(135deg,#e8f5e9 0%,#c8e6c9 100%)}
+        .type-category-header:active{transform:scale(0.995)}
+        .type-category-icon{font-size:18px;margin-right:8px}
+        .type-category-arrow{font-size:14px;transition:transform 0.3s ease;color:var(--bamboo-primary)}
+        .type-category.expanded .type-category-arrow{transform:rotate(90deg)}
+        .type-category-content{max-height:0;overflow:hidden;transition:max-height 0.3s ease, padding 0.3s ease;padding:0 12px;background:white}
+        .type-category.expanded .type-category-content{max-height:500px;padding:12px}
+        .type-category-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+        .type-category.expanded{border-color:var(--bamboo-primary);box-shadow:0 2px 8px rgba(102,187,106,0.15)}
+        
+        @media (max-width:768px){
+            .type-category-grid{grid-template-columns:repeat(2,1fr)}
+            .type-category-header{padding:10px 12px;font-size:14px}
+        }
+        @media (max-width:480px){
+            .type-category-grid{grid-template-columns:1fr}
+        }
+    
+        /* ========== V2.2.0 新增：分享口令功能 ========== */
+        .share-code-section {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
+            border: 2px dashed #ffb74d;
+        }
+        .share-code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .share-code-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e65100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .share-code-display {
+            background: white;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #e65100;
+            letter-spacing: 4px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .share-code-display:hover {
+            background: #fff3e0;
+            transform: scale(1.02);
+        }
+        .share-code-display::after {
+            content: "点击复制";
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #666;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .share-code-display:hover::after {
+            opacity: 1;
+        }
+        .share-code-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .share-code-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ffb74d;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .share-code-input:focus {
+            outline: none;
+            border-color: #ff9800;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+        .btn-code {
+            background: linear-gradient(135deg, #FF8F00 0%, #E65100 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .btn-code:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(230, 81, 0, 0.3);
+        }
+        .code-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .code-success {
+            animation: codePop 0.4s ease;
+            color: #4CAF50 !important;
+            border-color: #4CAF50 !important;
+        }
+        @keyframes codePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 768px) {
+            .share-code-input-group { flex-direction: column; }
+            .share-code-display { font-size: 20px; letter-spacing: 2px; }
+        }
+
+    </style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+    <div id="cdnErrorContainer" class="no-print" style="display:none"></div>
+    <div id="leafContainer"></div>
+    <div class="keyboard-shortcuts no-print"><div style="font-weight:bold;margin-bottom:6px;color:var(--bamboo-dark)">⌨️ 快捷键</div><div><kbd>Ctrl</kbd>+<kbd>P</kbd>打印</div><div><kbd>Enter</kbd>提交/下一题</div><div><kbd>←</kbd><kbd>→</kbd>切换题目</div><div><kbd>Esc</kbd>关闭弹窗</div></div>
+    <div class="floating-timer no-print" id="floatingTimer"><div class="timer-header"><span class="timer-icon-main">⏱️</span><span class="timer-title">计时器</span></div><div class="timer-row timer-current"><span class="timer-label-small">⏳单次</span><span class="timer-value" id="currentTimer">00:00</span></div><div class="timer-row timer-total-row"><span class="timer-label-small">⏱️累计</span><span class="timer-value" id="totalTimer">00:00</span></div><div class="drag-hint">❤拖动移动</div></div>
+    <div class="celebration hidden" id="celebration"></div>
+    <div class="container">
+        <header class="header"><h1 class="main-title">🎋 竹小苗计算出题机 🌱</h1></header>
+        <div class="marquee-container no-print"><div class="marquee-content" id="marqueeContent"></div></div>
+        <div class="info-panel no-print">
+            <div class="qr-code" id="qrcodeContainer"></div>
+            <div class="info-center">
+                <div class="info-item" style="font-size:16px;color:#1B5E20;font-weight:bold;letter-spacing:1px">🌿 虽不会编织，但为了艺馨小朋友，手搓也要搞出来 🌿</div>
+                <div class="info-item">🖊️ 作者：<a href="https://wgw.weixiao100.com.cn/custom/wgw/index?schoolCode=72784383-4&qySchool=0" target="_blank">芭比娃娃的爸比</a></div>
+                <div class="info-item" id="versionDisplay">
+                    📦 版本号：<span id="versionText">加载中...</span> | 
+                    <a href="https://www.123865.com/s/w0eA-fjDFv?pwd=zyxx#" target="_blank">更新升级（提取码:zyxx）</a> | 
+                    <a href="https://docs.qq.com/aio/DS2p2VXZkeGZuVkFH" target="_blank">📖 说明文档</a> | 
+                    <a href="http://120.77.43.174:9002/kousuan/" target="_blank">🌐 在线版</a> | 
+                    <a href="https://js5cyoeyl3vek.ok.kimi.link/" target="_blank">🌐 演示版</a>
+                </div>
+            </div>
+            <div class="qr-code" id="qrcodeContainer2"></div>
+        </div>
+        <div class="card no-print">
+            <div class="card-title">🎯 选题设置</div>
+            <div class="tabs">
+                <div class="tab-group"><button class="tab" onclick="switchTab('outline')" id="tab-outline">📚 大纲题型</button><button class="tab active" onclick="switchTab('custom')" id="tab-custom">⚙️ 自定义题型</button></div>
+                <button class="btn-reset" onclick="resetSettings()">🔄 重置设置</button>
+            </div>
+            <div class="tab-content" id="outlineTab">
+                <div class="input-group"><label class="input-label">选择年级</label><select class="input-field" id="gradeSelect" onchange="updateOutlineOptions()"><option value="1">一年级</option><option value="2">二年级</option><option value="3">三年级</option><option value="4">四年级</option><option value="5">五年级</option><option value="6">六年级</option></select></div>
+                <div class="input-group"><div class="selection-header"><label class="input-label" style="margin-bottom:0">选择册别</label><label class="multi-switch"><input type="checkbox" id="volumeMultiSwitch" onchange="toggleVolumeMultiMode()">允许多选</label><span class="multi-hint">按住可多选</span></div><div class="option-grid" id="volumeSelect"></div></div>
+                <div class="input-group"><div class="selection-header"><label class="input-label" style="margin-bottom:0">题型选择</label><label class="multi-switch"><input type="checkbox" id="typeMultiSwitch" onchange="toggleOutlineTypeMultiMode()">允许多选</label><span class="multi-hint">按住可多选</span></div><div class="option-grid" id="outlineTypes"></div></div>
+            </div>
+            <div class="tab-content active" id="customTab">
+                <div class="input-group">
+                    <div class="selection-header">
+                        <label class="input-label" style="margin-bottom:0">自定义题型</label>
+                        <label class="multi-switch"><input type="checkbox" id="customTypeMultiSwitch" onchange="toggleCustomTypeMultiMode()">允许多选</label>
+                        <span class="multi-hint">按住可多选</span>
+                    </div>
+                    
+                    <!-- 基础运算类别 -->
+                    <div class="type-category expanded" id="category-basic">
+                        <div class="type-category-header" onclick="toggleCategory('category-basic')">
+                            <div style="display:flex;align-items:center"><span class="type-category-icon">🔢</span><span>基础运算</span></div>
+                            <span class="type-category-arrow">▶</span>
+                        </div>
+                        <div class="type-category-content">
+                            <div class="type-category-grid">
+                                <div class="checkbox-item selected" data-type="add" onclick="toggleCustomType(this)"><span class="checkbox-icon">➕</span><span>纯加法</span></div>
+                                <div class="checkbox-item" data-type="sub" onclick="toggleCustomType(this)"><span class="checkbox-icon">➖</span><span>纯减法</span></div>
+                                <div class="checkbox-item" data-type="multi" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔢</span><span>连加法</span></div>
+                                <div class="checkbox-item" data-type="div" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔢</span><span>连减法</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 乘除运算类别 -->
+                    <div class="type-category" id="category-multiply">
+                        <div class="type-category-header" onclick="toggleCategory('category-multiply')">
+                            <div style="display:flex;align-items:center"><span class="type-category-icon">✖️</span><span>乘除运算</span></div>
+                            <span class="type-category-arrow">▶</span>
+                        </div>
+                        <div class="type-category-content">
+                            <div class="type-category-grid">
+                                <div class="checkbox-item" data-type="multiply" onclick="toggleCustomType(this)"><span class="checkbox-icon">✖️</span><span>乘法</span></div>
+                                <div class="checkbox-item" data-type="divide" onclick="toggleCustomType(this)"><span class="checkbox-icon">➗</span><span>除法</span></div>
+                                <div class="checkbox-item" data-type="remainder" onclick="toggleCustomType(this)"><span class="checkbox-icon">🎯</span><span>带余数的除法</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 混合运算类别 -->
+                    <div class="type-category" id="category-mixed">
+                        <div class="type-category-header" onclick="toggleCategory('category-mixed')">
+                            <div style="display:flex;align-items:center"><span class="type-category-icon">🔀</span><span>混合运算</span></div>
+                            <span class="type-category-arrow">▶</span>
+                        </div>
+                        <div class="type-category-content">
+                            <div class="type-category-grid">
+                                <div class="checkbox-item" data-type="mixed" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔀</span><span>加减混合</span></div>
+                                <div class="checkbox-item" data-type="mixed-2" onclick="toggleCustomType(this)"><span class="checkbox-icon">⚖️</span><span>两数加减混合</span></div>
+                                <div class="checkbox-item" data-type="mixed-3" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔣</span><span>三数加减混合</span></div>
+                                <div class="checkbox-item" data-type="bracket" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔢</span><span>带括号算式</span></div>
+                                <div class="checkbox-item" data-type="fill" onclick="toggleCustomType(this)"><span class="checkbox-icon">❓</span><span>填空题形式</span></div>
+                                <div class="checkbox-item" data-type="complex" onclick="toggleCustomType(this)"><span class="checkbox-icon">📐</span><span>混合运算</span></div>
+                                <div class="checkbox-item" data-type="four-mixed" onclick="toggleCustomType(this)"><span class="checkbox-icon">🔣</span><span>四则混合运算</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 竖式脱式类别 -->
+                    <div class="type-category" id="category-vertical">
+                        <div class="type-category-header" onclick="toggleCategory('category-vertical')">
+                            <div style="display:flex;align-items:center"><span class="type-category-icon">🧮</span><span>竖式与脱式</span></div>
+                            <span class="type-category-arrow">▶</span>
+                        </div>
+                        <div class="type-category-content">
+                            <div class="type-category-grid">
+                                <div class="checkbox-item" data-type="vertical" onclick="toggleCustomType(this)"><span class="checkbox-icon">🧮</span><span>竖式计算</span></div>
+                                <div class="checkbox-item" data-type="step" onclick="toggleCustomType(this)"><span class="checkbox-icon">📝</span><span>脱式计算</span></div>
+                                <div class="checkbox-item" data-type="carry" onclick="toggleCustomType(this)"><span class="checkbox-icon">📝</span><span>加法进位</span></div>
+                                <div class="checkbox-item" data-type="borrow" onclick="toggleCustomType(this)"><span class="checkbox-icon">✏️</span><span>减法退位</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分数运算类别 -->
+                    <div class="type-category" id="category-fraction">
+                        <div class="type-category-header" onclick="toggleCategory('category-fraction')">
+                            <div style="display:flex;align-items:center"><span class="type-category-icon">🍕</span><span>分数运算</span></div>
+                            <span class="type-category-arrow">▶</span>
+                        </div>
+                        <div class="type-category-content">
+                            <div class="type-category-grid">
+                                <div class="checkbox-item" data-type="fraction-add" onclick="toggleCustomType(this)"><span class="checkbox-icon">➕</span><span>分数加法</span></div>
+                                <div class="checkbox-item" data-type="fraction-sub" onclick="toggleCustomType(this)"><span class="checkbox-icon">➖</span><span>分数减法</span></div>
+                                <div class="checkbox-item" data-type="fraction-mul" onclick="toggleCustomType(this)"><span class="checkbox-icon">✖️</span><span>分数乘法</span></div>
+                                <div class="checkbox-item" data-type="fraction-div" onclick="toggleCustomType(this)"><span class="checkbox-icon">➗</span><span>分数除法</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:8px;padding:8px 12px;background:rgba(102,187,106,0.1);border-left:3px solid var(--bamboo-primary);border-radius:6px;font-size:12px;color:#2E7D32"><strong>💡 新题型说明：</strong><br><strong>竖式计算</strong>：多位数加减乘除，适合列竖式练习（含进位/借位）<br><strong>脱式计算</strong>：多步混合运算，需写出中间步骤（先乘除后加减，有括号先算括号）</div>
+            </div>
+            <div class="settings-inner">
+                <div class="card-title" style="font-size:16px;margin-bottom:12px;border-bottom:none;padding-bottom:0">📝 题目设置</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                    <div class="input-group" style="margin-bottom:0"><label class="input-label" style="font-size:12px">题目数量（1-100）<div class="range-hint" style="display:block;margin-left:0;margin-top:2px">⚠️数值不能为0</div></label><div class="number-control"><button class="control-btn-square control-btn-minus" onclick="adjustNumber('count',-1)">−</button><div class="control-value-input"><input type="number" id="questionCountInput" value="10" min="1" max="100" oninput="syncNumberInput('count',this.value)"></div><button class="control-btn-square control-btn-plus" onclick="adjustNumber('count',1)">+</button></div></div>
+                    <div class="input-group" style="margin-bottom:0"><label class="input-label" style="font-size:12px">数值范围（1-10000）<div class="range-hint" style="display:block;margin-left:0;margin-top:2px">⚠️答案和题目范围</div></label><div class="number-control"><button class="control-btn-square control-btn-minus" onclick="adjustNumber('range',-10)">−</button><div class="control-value-input"><input type="number" id="numberRangeInput" value="20" min="1" max="10000" step="10" oninput="syncNumberInput('range',this.value)"></div><button class="control-btn-square control-btn-plus" onclick="adjustNumber('range',10)">+</button></div></div>
+                </div>
+                <div class="input-group" style="margin-bottom:8px"><label class="input-label" style="font-size:12px">题型难度</label><div class="selector-group" style="margin-bottom:0"><div class="selector-btn easy active" onclick="setDifficulty('easy')">🌱初入江湖</div><div class="selector-btn medium" onclick="setDifficulty('medium')">🌿小有成就</div><div class="selector-btn hard" onclick="setDifficulty('hard')">🎋身手不凡</div></div></div>
+                <div class="input-group" style="margin-bottom:0"><label class="input-label" style="font-size:12px">计算范围</label><div class="selector-group" style="margin-bottom:0"><div class="selector-btn positive active" onclick="setNegativeMode(false)" id="btn-positive">🛡️非负模式</div><div class="selector-btn negative" onclick="setNegativeMode(true)" id="btn-negative">⚔️允许负数</div></div></div>
+            </div>
+            
+            <!-- 分享口令区域 V2.2.0 -->
+            <div class="share-code-section">
+                <div class="share-code-header">
+                    <div class="share-code-title">🔑 出题分享口令</div>
+                    <button class="btn-code" onclick="generateShareCode()" style="font-size: 12px; padding: 6px 12px;">生成口令</button>
+                </div>
+
+                <div id="shareCodeDisplay" class="share-code-display" style="display: none;" onclick="copyShareCode()">
+                    --------
+                </div>
+
+                <div class="share-code-input-group">
+                    <input type="text" 
+                           class="share-code-input" 
+                           id="shareCodeInput" 
+                           placeholder="输入口令加载配置" 
+                           maxlength="8"
+                           oninput="validateCodeInput(this)"
+                           onkeypress="if(event.key==='Enter')applyShareCode()">
+                    <button class="btn-code" onclick="applyShareCode()">使用口令</button>
+                </div>
+
+                <div class="code-hint">
+                    💡 提示：配置好题目后点击"生成口令"，将口令发给学生/家长，对方输入即可自动配置相同题型
+                </div>
+            </div>
+
+            <div class="divider-section">
+                <div class="input-group"><label class="input-label">🚀 出题设置</label><div class="option-grid"><div class="checkbox-item selected" onclick="setQuestionMode('multi',this)"><input type="radio" name="mode" checked value="multi"><span class="checkbox-icon">📋</span><span>多题模式</span></div><div class="checkbox-item" onclick="setQuestionMode('single',this)"><input type="radio" name="mode" value="single"><span class="checkbox-icon">📝</span><span>单题模式</span></div></div></div>
+                <div class="input-group" id="columnSelect"><label class="input-label">📊 显示列数</label><div class="option-grid"><div class="checkbox-item" onclick="setColumn(1,this)"><input type="radio" name="col" value="1"><span>单列</span></div><div class="checkbox-item selected" onclick="setColumn(2,this)"><input type="radio" name="col" checked value="2"><span>双列</span></div><div class="checkbox-item" onclick="setColumn(3,this)"><input type="radio" name="col" value="3"><span>三列</span></div><div class="checkbox-item" onclick="setColumn(4,this)"><input type="radio" name="col" value="4"><span>四列</span></div></div></div>
+                <div class="input-group" id="fractionModeSelect"><label class="input-label">🔢 分数显示模式</label><div class="option-grid"><div class="checkbox-item selected" onclick="setFractionMode('traditional',this)"><input type="radio" name="fractionMode" checked value="traditional"><span>分数线模式</span></div><div class="checkbox-item" onclick="setFractionMode('slash',this)"><input type="radio" name="fractionMode" value="slash"><span>斜线模式</span></div></div></div>
+                <div class="btn-row-compact"><button class="btn btn-blue" onclick="generateQuestions()">🚀出题</button><button class="btn btn-danger" onclick="quickCheck()">✅提交</button></div>
+            </div>
+        </div>
+        <div class="card print-area" id="questionCard" style="display:none">
+            <div class="print-header" id="printHeader">
+                <div class="print-header-line"><div class="print-title-main">🎋 竹小苗数学练习题 🌱</div></div>
+                <div class="print-header-line print-info-row">
+                    <div class="print-info-item"><span class="print-label">🏫 学校：</span><span class="print-underline" id="printSchool">__________</span></div>
+                    <div class="print-info-item"><span class="print-label">👨‍🏫 班级：</span><span class="print-underline" id="printClass">__________</span></div>
+                    <div class="print-info-item"><span class="print-label">👤 姓名：</span><span class="print-underline" id="printName">__________</span></div>
+                </div>
+                <div class="print-header-line print-info-row" style="padding-left:20px">
+                    <div class="print-info-item" style="flex:2;min-width:300px"><span class="print-label">📅 日期：</span><span class="print-underline" id="printDate">____年__月__日 __:__:__</span></div>
+                    <div class="print-info-item" style="min-width:120px"><span class="print-label">💯 得分：</span><span class="print-underline" id="printScore">___/___</span></div>
+                </div>
+                <div class="print-header-line">
+                    <div class="print-meta-row" id="printMetaRow">
+                        <span class="print-meta-item"><span class="print-meta-label">题目数量：</span><span class="print-meta-value" id="metaCount">--</span></span>
+                        <span class="print-meta-item">|</span>
+                        <span class="print-meta-item"><span class="print-meta-label">难度：</span><span class="print-meta-value" id="metaDifficulty">--</span></span>
+                        <span class="print-meta-item">|</span>
+                        <span class="print-meta-item"><span class="print-meta-label">数值范围：</span><span class="print-meta-value" id="metaRange">--</span></span>
+                        <span class="print-meta-item">|</span>
+                        <span class="print-meta-item"><span class="print-meta-label">题型：</span><span class="print-meta-value" id="metaTypes" style="max-width:150px;overflow:hidden;text-overflow:ellipsis">--</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="question-area" id="questionArea"></div>
+            <div class="single-navigation no-print" id="singleNavigation" style="display:none">
+                <button class="btn btn-secondary" onclick="prevQuestion()">⬅️上一题</button>
+                <span id="questionCounter" style="font-size:16px;font-weight:bold;color:var(--bamboo-dark);display:flex;align-items:center"></span>
+                <button class="btn" onclick="nextQuestion()">下一题➡️</button>
+            </div>
+        </div>
+        <div class="action-buttons-panel no-print" id="actionButtonsPanel" style="display:none">
+            <div class="action-title">✏️ 答题操作</div>
+            <div class="btn-row-compact">
+                <button class="btn btn-danger" onclick="detailedCheck()">📝批改</button>
+                <button class="btn btn-secondary" onclick="showSolution()">💡解题</button>
+                <button class="btn btn-secondary" onclick="redoCurrent()">🔄重做</button>
+                <button class="btn" onclick="printQuestions()">🖨️打印PDF</button>
+                <button class="btn btn-secondary" onclick="saveAsImage()">💾存图</button>
+                <button class="btn btn-wechat" onclick="shareToWeChat()">💬微信</button>
+                <button class="btn btn-secondary" onclick="shareToDingTalk()">📱钉钉</button>
+                </div>
+            <div class="download-hint">打印/保存的文件名将自动包含精确时间戳（年月日_时分秒）</div>
+        </div>
+        <div class="result-panel no-print" id="resultPanel">
+            <div class="card-title" style="color:var(--accent-orange);border-bottom-color:#ffe0b2;margin-bottom:15px">🏆 奖励系统</div>
+            <div class="score-display" id="scoreDisplay" style="display:none">
+                <div class="emoji-feedback" id="emojiFeedback">🌱</div>
+                <div class="score-value" id="scoreValue">0/0</div>
+                <div id="scoreDetail">正确率：0%</div>
+                <div class="timer-stats" id="timerStats" style="display:none"></div>
+            </div>
+            <div id="scorePlaceholder" style="text-align:center;color:#999;padding:20px;font-style:italic">完成答题后查看成绩统计和用时记录...</div>
+        </div>
+        <div class="student-info-card no-print" id="studentInfoCard" style="display:none">
+            <div class="card-title" style="border-bottom:1px solid rgba(245,124,0,0.3)">👤 学生信息</div>
+            <div class="student-info-header">
+                <div class="info-field"><label>🏫 学校</label><div class="custom-select-wrapper"><select class="custom-select" id="schoolInput" onchange="updateSchoolInput(this)"><option value="">-- 请选择或输入 --</option></select></div></div>
+                <div class="info-field"><label>👨‍🏫 班级</label><div class="custom-select-wrapper"><select class="custom-select" id="classInput" onchange="updateClassInput(this)"><option value="">-- 请选择或输入 --</option></select></div></div>
+                <div class="info-field"><label>👤 姓名</label><div class="custom-select-wrapper"><select class="custom-select" id="nameInput" onchange="updateNameInput(this)"><option value="">-- 请选择或输入 --</option></select></div></div>
+                <div class="info-field"><label>📅 日期</label><input type="text" id="dateInput" class="input-field" style="padding:8px;font-size:14px" readonly></div>
+            </div>
+            <div class="encouragement-box" id="encouragementBox">💪 加油！你是最棒的！</div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">提示</div>
+            <div id="modalBody" style="white-space:pre-line;line-height:1.6;text-align:left"></div>
+            <div style="margin-top:20px;display:flex;gap:12px;justify-content:center">
+                <button class="btn btn-secondary" onclick="closeModal()" id="modalCancelBtn" style="display:none;min-width:80px">取消</button>
+                <button class="btn" onclick="confirmModalAction()" id="modalConfirmBtn" style="min-width:80px">确定</button>
+            </div>
+        </div>
+    </div>
+    <canvas id="hiddenCanvas" style="display:none"></canvas>
+    <script>
+        const CONFIG={version:'V2.2.0',author:'芭比娃娃的爸比',storagePrefix:'zhuxiaomiao_',marqueeTexts:[{text:"1.孩子啊孩子，你真牛掰，潜力无限，似宇宙浩瀚无边！相信自己，准没错哒～",color:"#E91E63"},{text:"2.遇到难题别慌张，开动脑筋想办法，爸爸妈妈永远是你最坚实的后盾。",color:"#FF9800"},{text:"3.《勤学》汪洙：学海无涯勤作舟，书山有路志为梯。莫待白头空悲切，少年正是读书时。",color:"#2196F3"},{text:"4.比昨天的你更优秀一点点就好，坚持下去，你会发现自己能变得无比强大哟！",color:"#4CAF50"},{text:"5.《劝学》颜真卿：三更灯火五更鸡，正是少年读书时。墨香染透晨光里，今日苦读终成诗。",color:"#9C27B0"},{text:"6.别怕摔倒，再爬起，坚持下去，就能解锁\"成功小达人\"称号！",color:"#FF5722"},{text:"7.满江红·写怀   宋·岳飞      怒发冲冠，凭栏处、潇潇雨歇。抬望眼、仰天长啸，壮怀激烈。三十功名尘与土，八千里路云和月。莫等闲、白了少年头，空悲切。",color:"#F44336"}],teachingRequirements:{1:{up:['10以内加法','10以内减法','20以内加法','20以内减法','20以内不退位减法'],down:['20以内退位减法','20以内加减混合运算','平10法和破10法','100以内加减法']},2:{up:['100以内连加连减混合','乘法认识和口诀','除法认识和求商'],down:['有余数的除法','万以内数的加减法']},3:{up:['万以内连加连减混合','乘除加减两步混合','一位数乘两三位数','元角分小数加减'],down:['一位数除两三位数','两位数乘两位数','同分母分数加减']},4:{up:['三位数乘两位数','三位数除以两位数','运算律及混合运算','常见数量关系'],down:['小数加减法','小数乘法']},5:{up:['分数加减法','分数乘法','分数除法'],down:['分数加减法','分数乘法','分数除法']},6:{up:['分数混合运算','百分数应用'],down:[]}},studentList:{schools:["中山市实验小学","中山东区竹苑小学","中山石岐实验小学","中山市石岐中心小学","广州市南沙区湾区实验学校","广州外国语学校附属学校","华南师范大学附属南沙小学","广州市海珠区实验小学","深圳实验学校小学部","深圳外国语小学","中山市小榄镇中心小学","中山龙瑞小学","中山石岐东区柏苑中心小学","中山市东区朗晴小学","中山市三鑫凯茵学校","中山市卓雅外国语学校","中山市三乡载德小学","三乡镇光后中心小学","大布小学（中山三乡）"],classes:["一（1）班","一（2）班","一（3）班","一（4）班","二（1）班","二（2）班","三（1）班","三（2）班","四（1）班","四（2）班","五（1）班","五（2）班","六（1）班","六（2）班"],names:["思灵","宝璐","依珞","落英","若竹","晏晏","兹佩","予兮","菀青","琳琅","依斐","Lucy","Yuki","Marli","Alice","Hilda","Jim"]},encouragements:["💪 加油！你是最棒的！","🌟 相信自己，你比想象中更强大！","🎯 专注当下，每一题都是进步！","🌈 错了没关系，重要的是你在学习！","🚀 冲刺吧，少年！未来属于你！","🎋 像竹子一样，节节高升！","✨ 星光不问赶路人，时光不负有心人。"]};
+
+        let appState={currentTab:'custom',grade:1,volumes:['up'],outlineTypes:[],selectedCustomTypes:['add'],difficulty:'easy',questionCount:10,numberRange:20,allowNegative:false,questionMode:'multi',columns:2,fractionMode:'traditional',questions:[],currentQuestionIndex:0,answers:{},timer:{startTime:null,elapsed:0,totalElapsed:0,interval:null},isSubmitted:false,volumeMultiMode:false,outlineTypeMultiMode:false,customTypeMultiMode:false,hasScrolledToResult:false,history:[]};
+
+        let modalCallbackId=0;
+        let currentModalCallback=null;
+
+        const OperationLock={locks:new Map(),acquire(operation,timeout=5000){if(this.locks.get(operation)){console.warn(`[OperationLock] ${operation} 正在执行中，请稍候...`);return false}this.locks.set(operation,true);if(timeout>0)setTimeout(()=>this.release(operation),timeout);return true},release(operation){this.locks.delete(operation)},async run(operation,fn,errorHandler=null){if(!this.acquire(operation)){showModal('⏳ 请稍候','操作正在执行中，请不要重复点击');return null}try{return await fn()}catch(error){console.error(`[${operation}] 执行失败:`,error);if(errorHandler)errorHandler(error);throw error}finally{this.locks.delete(operation)}}};
+
+        const ResizeManager={timer:null,handler:null,init(){this.handler=()=>{clearTimeout(this.timer);this.timer=setTimeout(adjustLayoutOnResize,250)};window.addEventListener('resize',this.handler)},destroy(){if(this.handler){window.removeEventListener('resize',this.handler);this.handler=null}clearTimeout(this.timer)}};
+
+        const SafeAsync={async clipboard(text,successMsg='已复制到剪贴板'){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);showModal('✅ 成功',successMsg);return true}throw new Error('Clipboard API not available')}catch(err){console.warn('现代剪贴板 API 失败，降级到兼容模式:',err);return this.fallbackCopy(text,successMsg)}},fallbackCopy(text,successMsg){try{const textarea=document.createElement('textarea');textarea.value=text;textarea.style.cssText='position:fixed;left:-9999px;opacity:0;z-index:-1;';document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand('copy');document.body.removeChild(textarea);if(success){showModal('✅ 成功',successMsg+'（兼容模式）');return true}throw new Error('execCommand failed')}catch(err){console.warn('兼容复制失败:',err);showModal('⚠️ 复制失败','您的浏览器限制自动复制，请手动选择并复制以下内容：\n\n'+text.substring(0,200)+(text.length>200?'...':''));return false}},async screenshot(elementId,fileNameGenerator){if(typeof html2canvas==='undefined'){showModal('❌ 截图失败','图片生成库未加载，请检查网络连接后重试');return false}const element=document.getElementById(elementId);if(!element||element.style.display==='none'){showModal('⚠️ 提示','请先出题后再保存图片');return false}showModal('⏳ 处理中','正在生成高清图片，请稍候...',false);try{const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error('截图超时（10秒）')),10000));const capturePromise=html2canvas(element,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true,allowTaint:true,scrollX:0,scrollY:-window.scrollY,windowWidth:document.documentElement.scrollWidth,windowHeight:document.documentElement.scrollHeight,onclone:(clonedDoc)=>{clonedDoc.querySelectorAll('.floating-timer, .bamboo-leaf, .keyboard-shortcuts, .no-print').forEach(el=>el.remove())}});const canvas=await Promise.race([capturePromise,timeoutPromise]);const link=document.createElement('a');if('download' in link){const fileName=(typeof fileNameGenerator==='function'?fileNameGenerator():'download')+'.png';link.download=fileName;link.href=canvas.toDataURL('image/png');link.click();closeModal();showModal('✅ 保存成功',`图片已保存为：${fileName}`);return true}else{const imgData=canvas.toDataURL('image/png');const newWindow=window.open('','_blank');if(newWindow){newWindow.document.write(`<html><head><title>图片预览 - 长按保存</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;}img{max-width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+        /* ========== V2.2.0 新增：分享口令功能 ========== */
+        .share-code-section {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
+            border: 2px dashed #ffb74d;
+        }
+        .share-code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .share-code-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e65100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .share-code-display {
+            background: white;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #e65100;
+            letter-spacing: 4px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .share-code-display:hover {
+            background: #fff3e0;
+            transform: scale(1.02);
+        }
+        .share-code-display::after {
+            content: "点击复制";
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #666;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .share-code-display:hover::after {
+            opacity: 1;
+        }
+        .share-code-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .share-code-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ffb74d;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .share-code-input:focus {
+            outline: none;
+            border-color: #ff9800;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+        .btn-code {
+            background: linear-gradient(135deg, #FF8F00 0%, #E65100 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .btn-code:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(230, 81, 0, 0.3);
+        }
+        .code-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .code-success {
+            animation: codePop 0.4s ease;
+            color: #4CAF50 !important;
+            border-color: #4CAF50 !important;
+        }
+        @keyframes codePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 768px) {
+            .share-code-input-group { flex-direction: column; }
+            .share-code-display { font-size: 20px; letter-spacing: 2px; }
+        }
+
+    </style></head><body><img src="${imgData}" alt="练习题"></body></html>`);closeModal();showModal('📱 iOS 提示','图片已在新窗口打开，请长按图片保存到相册');return true}throw new Error('Popup blocked')}}catch(error){closeModal();console.error('截图失败:',error);showModal('❌ 保存失败',`生成图片失败：${error.message}\n\n建议：\n1. 减少题目数量后重试\n2. 使用系统截图功能\n3. 检查浏览器权限设置`);return false}}};
+
+        const InputValidator={number(value,options={}){const{min=1,max=100,default:defaultValue=min,integer=true,fieldName='数值'}=options;let num=integer?parseInt(value):parseFloat(value);if(isNaN(num)||!isFinite(num)){console.warn(`[InputValidator] ${fieldName} 解析失败，使用默认值:`,value);return{value:defaultValue,valid:false,error:`${fieldName}必须是有效的数字`}}let clamped=false;if(num<min){num=min;clamped=true}else if(num>max){num=max;clamped=true}return{value:num,valid:!clamped,error:clamped?`${fieldName}已自动修正为允许范围(${min}-${max})`:null}},array(arr,validValues=[],allowEmpty=false){if(!Array.isArray(arr))return{valid:false,value:[],error:'数据格式错误'};if(!allowEmpty&&arr.length===0)return{valid:false,value:[],error:'至少选择一项'};const safeValues=arr.filter(item=>validValues.includes(item)&&typeof item!=='object'&&item!=='__proto__'&&item!=='constructor');return{value:safeValues,valid:safeValues.length>0||(allowEmpty&&safeValues.length===0),error:safeValues.length===0?'包含无效选项':null}},string(str,maxLength=100){if(typeof str!=='string')return{value:'',valid:false,error:'输入类型错误'};const sanitized=str.replace(/[<>]/g,'').slice(0,maxLength).trim();return{value:sanitized,valid:sanitized.length>0,error:sanitized.length===0?'输入不能为空':null}}};
+
+        const StorageManager={prefix:CONFIG.storagePrefix,getSize(){let total=0;for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);const value=localStorage.getItem(key);total+=(key.length+value.length)*2}return total},setItem(key,value){const fullKey=this.prefix+key;const jsonValue=JSON.stringify(value);try{localStorage.setItem(fullKey,jsonValue);return{success:true,method:'localStorage'}}catch(e){if(e.name==='QuotaExceededError'||e.code===22||e.message.includes('quota')){console.warn('[StorageManager] 存储配额已满，尝试清理旧数据...');this.cleanupOldHistory();try{localStorage.setItem(fullKey,jsonValue);return{success:true,method:'localStorage',cleaned:true}}catch(e2){console.error('[StorageManager] 清理后仍然失败，使用内存降级:',e2);window._fallbackStorage=window._fallbackStorage||new Map();window._fallbackStorage.set(fullKey,value);return{success:true,method:'memory',warning:'数据仅保存在内存中，刷新页面后将丢失'}}}throw e}},getItem(key){const fullKey=this.prefix+key;try{const item=localStorage.getItem(fullKey);if(item)return JSON.parse(item)}catch(e){console.warn('[StorageManager] 读取失败:',e)}if(window._fallbackStorage&&window._fallbackStorage.has(fullKey))return window._fallbackStorage.get(fullKey);return null},removeItem(key){const fullKey=this.prefix+key;try{localStorage.removeItem(fullKey)}catch(e){console.warn('[StorageManager] 删除失败:',e)}if(window._fallbackStorage)window._fallbackStorage.delete(fullKey)},cleanupOldHistory(){}};
+
+        document.addEventListener('DOMContentLoaded',function(){checkCDNErrors();document.getElementById('versionText').textContent=CONFIG.version;initMarquee();initLeaves();initTimerDrag();ResizeManager.init();initVolumeSelect();updateOutlineOptions();initStudentSelects();loadStudentInfoFromStorage();updateDateTime();setInterval(updateDateTime,1000);document.addEventListener('keydown',handleKeyboard);updateEncouragement();initQRCode();checkPWAStatus();window.addEventListener('beforeunload',cleanupResources)});
+
+        function checkCDNErrors(){if(window.cdnLoadErrors&&window.cdnLoadErrors.length>0){const container=document.getElementById('cdnErrorContainer');let html='<div class="cdn-error-banner">';if(window.cdnLoadErrors.includes('qrcode'))html+='⚠️ 二维码生成库加载失败，二维码功能将不可用<br>';if(window.cdnLoadErrors.includes('html2canvas'))html+='⚠️ 截图功能库加载失败，保存图片功能将不可用<br>';html+='<button onclick="location.reload()">刷新页面重试</button></div>';container.innerHTML=html;container.style.display='block'}}
+
+        function cleanupResources(){ResizeManager.destroy();if(appState.timer.interval)clearInterval(appState.timer.interval);document.removeEventListener('keydown',handleKeyboard)}
+
+        function checkPWAStatus(){if('serviceWorker' in navigator)console.log('PWA支持已启用（需部署到服务器以启用离线功能）')}
+
+        function showModal(title,content,showCancel=false,confirmCallback=null){const modal=document.getElementById('modal');const modalTitle=document.getElementById('modalTitle');const modalBody=document.getElementById('modalBody');const cancelBtn=document.getElementById('modalCancelBtn');if(!modal||!modalTitle||!modalBody){alert(title+'\n\n'+content);return}modalTitle.textContent=title;modalBody.textContent=content;const thisCallbackId=++modalCallbackId;if(showCancel&&cancelBtn){cancelBtn.style.display='inline-flex';currentModalCallback={id:thisCallbackId,fn:confirmCallback}}else{if(cancelBtn)cancelBtn.style.display='none';currentModalCallback=null}modal.classList.add('active')}
+
+        function confirmModalAction(){const callback=currentModalCallback;closeModal();if(callback&&callback.fn&&callback.id===modalCallbackId){setTimeout(()=>{try{callback.fn()}catch(e){console.error('Modal callback error:',e);showModal('❌ 执行错误','操作执行失败：'+e.message)}},100)}}
+
+        function closeModal(){const modal=document.getElementById('modal');if(modal)modal.classList.remove('active')}
+
+        function getTimestampedFileName(prefix,type,ext){const now=new Date();const date=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');const time=String(now.getHours()).padStart(2,'0')+'-'+String(now.getMinutes()).padStart(2,'0')+'-'+String(now.getSeconds()).padStart(2,'0');const safePrefix=sanitizeFileName(prefix||'未命名');const safeType=sanitizeFileName(type);return`${safePrefix}_${safeType}_${date}_${time}.${ext}`}
+
+        function downloadFile(content,filename,mimeType){try{const blob=new Blob([content],{type:mimeType});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;link.style.display='none';document.body.appendChild(link);link.click();setTimeout(()=>{document.body.removeChild(link);URL.revokeObjectURL(url);console.log(`[下载完成] 文件: ${filename}`)},100);return true}catch(e){console.error('[下载失败]',e);showModal('❌ 下载失败','文件下载出错：'+e.message);return false}}
+
+        function sanitizeFileName(fileName){if(!fileName)return'未命名';return fileName.replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/\s+/g,'_').substring(0,100)}
+
+        function resetSettings(){const confirmContent=`点击"确定"后将执行以下重置操作：
+
+✅ 大纲题型（恢复：一年级/上册）
+✅ 自定义题型（恢复：纯加法）
+✅ 题目设置（10题/范围20/难度初入江湖/非负模式）
+✅ 出题设置（多题模式/双列显示）
+✅ 已有题目（清空题目和答案）
+✅ 学生信息（清空学校/班级/姓名）
+✅ 计时器（归零并停止）
+✅ 鼓励语（随机更新）
+
+⚠️ 提示：本地历史记录不会被清除`;showModal('🔄 重置确认',confirmContent,true,()=>{OperationLock.run('reset',executeReset,(error)=>{showModal('❌ 重置失败','重置过程中发生错误：'+error.message)})})}
+
+        function executeReset(){try{if(appState.timer&&appState.timer.interval)clearInterval(appState.timer.interval);appState={currentTab:'custom',grade:1,volumes:['up'],outlineTypes:[],selectedCustomTypes:['add'],difficulty:'easy',questionCount:10,numberRange:20,allowNegative:false,questionMode:'multi',columns:2,questions:[],currentQuestionIndex:0,answers:{},timer:{startTime:null,elapsed:0,totalElapsed:0,interval:null},isSubmitted:false,volumeMultiMode:false,outlineTypeMultiMode:false,customTypeMultiMode:false,hasScrolledToResult:false,history:[]};document.getElementById('gradeSelect').value='1';document.getElementById('volumeMultiSwitch').checked=false;document.querySelectorAll('#volumeSelect .checkbox-item').forEach(el=>{const volKey=el.getAttribute('data-volume');const input=el.querySelector('input');if(volKey==='up'){el.classList.add('selected');if(input)input.checked=true}else{el.classList.remove('selected');if(input)input.checked=false}});updateOutlineOptions();document.getElementById('typeMultiSwitch').checked=false;document.getElementById('customTypeMultiSwitch').checked=false;document.querySelectorAll('.checkbox-item[data-type]').forEach(el=>{const type=el.getAttribute('data-type');if(type==='add'){el.classList.add('selected')}else{el.classList.remove('selected')}});document.getElementById('questionCountInput').value=10;document.getElementById('numberRangeInput').value=20;document.querySelectorAll('.selector-btn.easy, .selector-btn.medium, .selector-btn.hard').forEach(btn=>btn.classList.remove('active'));document.querySelector('.selector-btn.easy').classList.add('active');document.getElementById('btn-positive').classList.add('active');document.getElementById('btn-negative').classList.remove('active');document.querySelectorAll('[name="mode"]').forEach(el=>{const item=el.closest('.checkbox-item');if(el.value==='multi'){if(item)item.classList.add('selected');el.checked=true}else{if(item)item.classList.remove('selected');el.checked=false}});['questionCard','actionButtonsPanel','resultPanel','studentInfoCard','printHeader','singleNavigation'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';if(id==='resultPanel')el.classList.remove('visible')}});document.getElementById('questionArea').innerHTML='';document.getElementById('scoreDisplay').style.display='none';document.getElementById('scorePlaceholder').style.display='block';document.getElementById('timerStats').style.display='none';document.getElementById('printScore').textContent='___/___';document.getElementById('schoolInput').selectedIndex=0;document.getElementById('classInput').selectedIndex=0;document.getElementById('nameInput').selectedIndex=0;updatePrintHeader();updateTimerDisplay();updateEncouragement();switchTab('custom');window.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>{showModal('✅ 重置完成','所有设置已恢复默认值（历史记录已保留），可以重新开始出题了！')},200)}catch(error){console.error('Reset failed:',error);throw error}}
+
+        function initQRCode(){if(typeof QRCode==='undefined'){console.warn('QRCode库未加载，跳过二维码生成');[document.getElementById('qrcodeContainer'),document.getElementById('qrcodeContainer2')].forEach(c=>{if(c)c.innerHTML='<span style="font-size:9px;color:#999">二维码<br>不可用</span>'});return}const url=window.location.href;const containers=[document.getElementById('qrcodeContainer'),document.getElementById('qrcodeContainer2')];try{containers.forEach(container=>{if(container){container.innerHTML='';const canvas=document.createElement('canvas');canvas.id='qrcodeCanvas';canvas.width=50;canvas.height=50;container.appendChild(canvas);new QRCode(canvas,{text:url,width:50,height:50,colorDark:"#388E3C",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}})}catch(e){console.error('二维码生成失败',e);containers.forEach(c=>{if(c)c.innerHTML='<span style="font-size:9px;color:#999">二维码失败</span>'})}}
+
+        function saveStudentInfoToStorage(){try{const school=document.getElementById('schoolInput').value;const cls=document.getElementById('classInput').value;const name=document.getElementById('nameInput').value;if(school)StorageManager.setItem('school',school);if(cls)StorageManager.setItem('class',cls);if(name)StorageManager.setItem('name',name)}catch(e){console.warn('无法保存学生信息到本地存储:',e)}}
+
+        function loadStudentInfoFromStorage(){try{const school=StorageManager.getItem('school');const cls=StorageManager.getItem('class');const name=StorageManager.getItem('name');['school','class','name'].forEach((type,idx)=>{const value=[school,cls,name][idx];const select=document.getElementById(type+'Input');if(value&&select){let exists=false;for(let i=0;i<select.options.length;i++){if(select.options[i].value===value){select.selectedIndex=i;exists=true;break}}if(!exists){const option=document.createElement('option');option.value=value;option.textContent=value;select.insertBefore(option,select.options[1]);select.value=value}}});updatePrintHeader()}catch(e){console.warn('无法从本地存储加载学生信息:',e)}}
+
+        function loadHistory(){return[]}
+        function saveToHistory(record){console.log('[History] 历史功能已移除，跳过保存:',record)}
+        function toggleHistory(){showModal('提示','历史功能已在 V2.0.4 精简版中移除')}
+        function renderHistory(){}
+        function clearHistory(){showModal('提示','历史功能已移除，无需清理')}
+        function exportHistory(format){showModal('提示','历史功能已移除，无法导出')}
+
+        function escapeHtml(text){if(!text)return'';return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+        function initMarquee(){const container=document.getElementById('marqueeContent');let html='';const cleanedTexts=CONFIG.marqueeTexts.map(item=>{let cleanText=item.text.replace(/^\d+\.\s*/,'');return{text:cleanText,color:item.color}});for(let i=0;i<3;i++){cleanedTexts.forEach(item=>{html+=`<span class="marquee-text" style="color: ${item.color}">${item.text}</span>`})}container.innerHTML=html}
+
+        function initLeaves(){const container=document.getElementById('leafContainer');const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;const isMobile=window.innerWidth<768;let maxLeaves=15;if(prefersReducedMotion)maxLeaves=0;else if(isMobile)maxLeaves=8;for(let i=0;i<maxLeaves;i++)createLeaf(container,i)}
+
+        function createLeaf(container,index){if(container.children.length>=20)container.removeChild(container.firstChild);const leaf=document.createElement('div');leaf.className='bamboo-leaf';leaf.innerHTML='🍃';leaf.style.left=(Math.random()*100)+'%';leaf.style.animationDuration=(Math.random()*8+12)+'s';leaf.style.animationDelay=(Math.random()*10)+'s';leaf.style.fontSize=(Math.random()*10+16)+'px';container.appendChild(leaf)}
+
+        function initTimerDrag(){const timer=document.getElementById('floatingTimer');let isDragging=false,startX,startY,initialLeft,initialTop;timer.addEventListener('mousedown',dragStart);timer.addEventListener('touchstart',dragStart,{passive:false});function dragStart(e){e.preventDefault();if(e.type==='touchstart'){startX=e.touches[0].clientX;startY=e.touches[0].clientY}else{startX=e.clientX;startY=e.clientY}const rect=timer.getBoundingClientRect();initialLeft=rect.left;initialTop=rect.top;isDragging=true;timer.classList.add('dragging');timer.style.animation='none';document.addEventListener('mousemove',drag);document.addEventListener('mouseup',dragEnd);document.addEventListener('touchmove',drag,{passive:false});document.addEventListener('touchend',dragEnd)}function drag(e){if(!isDragging)return;e.preventDefault();let clientX,clientY;if(e.type==='touchmove'){clientX=e.touches[0].clientX;clientY=e.touches[0].clientY}else{clientX=e.clientX;clientY=e.clientY}const deltaX=clientX-startX;const deltaY=clientY-startY;let newLeft=initialLeft+deltaX;let newTop=initialTop+deltaY;const maxLeft=window.innerWidth-timer.offsetWidth;const maxTop=window.innerHeight-timer.offsetHeight;newLeft=Math.max(0,Math.min(newLeft,maxLeft));newTop=Math.max(0,Math.min(newTop,maxTop));timer.style.left=newLeft+'px';timer.style.top=newTop+'px';timer.style.right='auto';timer.style.bottom='auto'}function dragEnd(){isDragging=false;timer.classList.remove('dragging');timer.style.animation='float-around 6s ease-in-out infinite';document.removeEventListener('mousemove',drag);document.removeEventListener('mouseup',dragEnd);document.removeEventListener('touchmove',drag);document.removeEventListener('touchend',dragEnd)}}
+
+        function switchTab(tab){appState.currentTab=tab;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');document.getElementById(tab+'Tab').classList.add('active')}
+
+        function toggleCategory(categoryId) {
+            const category = document.getElementById(categoryId);
+            if (category) {
+                category.classList.toggle('expanded');
+            }
+        }
+
+        function toggleCustomTypeMultiMode(){const checkbox=document.getElementById('customTypeMultiSwitch');appState.customTypeMultiMode=checkbox.checked;if(!appState.customTypeMultiMode&&appState.selectedCustomTypes.length>0){const firstType=appState.selectedCustomTypes[0];appState.selectedCustomTypes=[firstType];document.querySelectorAll('.checkbox-item[data-type]').forEach(el=>{const type=el.getAttribute('data-type');if(type===firstType){el.classList.add('selected')}else{el.classList.remove('selected')}})}}
+
+        function toggleCustomType(element){const type=element.getAttribute('data-type');if(appState.customTypeMultiMode){element.classList.toggle('selected');if(element.classList.contains('selected')){if(!appState.selectedCustomTypes.includes(type))appState.selectedCustomTypes.push(type)}else{appState.selectedCustomTypes=appState.selectedCustomTypes.filter(t=>t!==type)}}else{document.querySelectorAll('.checkbox-item[data-type]').forEach(el=>el.classList.remove('selected'));element.classList.add('selected');appState.selectedCustomTypes=[type]}if(appState.selectedCustomTypes.includes('remainder')&&appState.allowNegative){setNegativeMode(false);showModal('⚠️ 模式调整','带余数的除法已自动切换为非负模式（暂不支持负数）')}}
+
+        function setNegativeMode(allow){if(allow&&appState.selectedCustomTypes.includes('remainder')){showModal('提示','带余数的除法暂不支持负数模式，已自动关闭负数模式。');allow=false;document.getElementById('btn-positive').classList.add('active');document.getElementById('btn-negative').classList.remove('active')}appState.allowNegative=allow;document.getElementById('btn-positive').classList.toggle('active',!allow);document.getElementById('btn-negative').classList.toggle('active',allow)}
+
+        function initVolumeSelect(){const container=document.getElementById('volumeSelect');const volumes=[{key:'up',icon:'📖',label:'上册'},{key:'down',icon:'📘',label:'下册'}];let html='';volumes.forEach((vol,index)=>{const isSelected=index===0;html+=`<div class="checkbox-item ${isSelected?'selected':''}" onclick="toggleVolume(this, '${vol.key}')" data-volume="${vol.key}"><input type="checkbox" ${isSelected?'checked':''} value="${vol.key}"><span class="checkbox-icon">${vol.icon}</span><span>${vol.label}</span></div>`});container.innerHTML=html;appState.volumes=['up']}
+
+        function toggleVolumeMultiMode(){const checkbox=document.getElementById('volumeMultiSwitch');appState.volumeMultiMode=checkbox.checked;if(!appState.volumeMultiMode&&appState.volumes.length>0){const firstVol=appState.volumes[0];appState.volumes=[firstVol];document.querySelectorAll('#volumeSelect .checkbox-item').forEach(el=>{const volKey=el.getAttribute('data-volume');const input=el.querySelector('input');if(volKey===firstVol){el.classList.add('selected');input.checked=true}else{el.classList.remove('selected');input.checked=false}})}updateOutlineOptions()}
+
+        function toggleVolume(element,vol){if(appState.volumeMultiMode){element.classList.toggle('selected');const checkbox=element.querySelector('input');checkbox.checked=!checkbox.checked;if(checkbox.checked){if(!appState.volumes.includes(vol))appState.volumes.push(vol)}else{appState.volumes=appState.volumes.filter(v=>v!==vol)}}else{document.querySelectorAll('#volumeSelect .checkbox-item').forEach(el=>{el.classList.remove('selected');el.querySelector('input').checked=false});element.classList.add('selected');element.querySelector('input').checked=true;appState.volumes=[vol]}updateOutlineOptions()}
+
+        function toggleOutlineTypeMultiMode(){const checkbox=document.getElementById('typeMultiSwitch');appState.outlineTypeMultiMode=checkbox.checked;if(!appState.outlineTypeMultiMode&&appState.outlineTypes.length>0){const firstType=appState.outlineTypes[0];appState.outlineTypes=[firstType];document.querySelectorAll('#outlineTypes .checkbox-item').forEach(el=>{const typeName=el.getAttribute('data-type-name');const input=el.querySelector('input');if(typeName===firstType){el.classList.add('selected');input.checked=true}else{el.classList.remove('selected');input.checked=false}})}}
+
+        function updateOutlineOptions(){const grade=parseInt(document.getElementById('gradeSelect').value);appState.grade=grade;const container=document.getElementById('outlineTypes');let html='';let allTypes=[];appState.volumes.forEach(vol=>{if(CONFIG.teachingRequirements[grade]&&CONFIG.teachingRequirements[grade][vol]){allTypes=allTypes.concat(CONFIG.teachingRequirements[grade][vol])}});allTypes=[...new Set(allTypes)];if(!appState.outlineTypeMultiMode&&appState.outlineTypes.length===0&&allTypes.length>0)appState.outlineTypes=[allTypes[0]];if(!appState.outlineTypeMultiMode){const currentSelected=appState.outlineTypes[0];if(currentSelected&&!allTypes.includes(currentSelected))appState.outlineTypes=allTypes.length>0?[allTypes[0]]:[]}else{appState.outlineTypes=appState.outlineTypes.filter(t=>allTypes.includes(t))}allTypes.forEach((type)=>{let isSelected=appState.outlineTypeMultiMode?appState.outlineTypes.includes(type):appState.outlineTypes[0]===type;html+=`<div class="checkbox-item ${isSelected?'selected':''}" onclick="toggleOutlineType(this, '${type}')" data-type-name="${type}"><input type="checkbox" ${isSelected?'checked':''}><span class="checkbox-icon">${type.includes('上')||type.includes('册')?'📖':'📘'}</span><span>${type}</span></div>`});container.innerHTML=html}
+
+        function toggleOutlineType(element,type){if(appState.outlineTypeMultiMode){element.classList.toggle('selected');const checkbox=element.querySelector('input');checkbox.checked=!checkbox.checked;if(checkbox.checked){if(!appState.outlineTypes.includes(type))appState.outlineTypes.push(type)}else{appState.outlineTypes=appState.outlineTypes.filter(t=>t!==type)}}else{document.querySelectorAll('#outlineTypes .checkbox-item').forEach(el=>{el.classList.remove('selected');el.querySelector('input').checked=false});element.classList.add('selected');element.querySelector('input').checked=true;appState.outlineTypes=[type]}}
+
+        function setDifficulty(level){appState.difficulty=level;document.querySelectorAll('.selector-btn.easy, .selector-btn.medium, .selector-btn.hard').forEach(btn=>btn.classList.remove('active'));const targetBtn=document.querySelector(`.selector-btn.${level}`);if(targetBtn)targetBtn.classList.add('active')}
+
+        function adjustNumber(type,delta){const input=document.getElementById(type==='count'?'questionCountInput':'numberRangeInput');let value=parseInt(input.value)+delta;const options=type==='count'?{min:1,max:100,fieldName:'题目数量'}:{min:1,max:10000,fieldName:'数值范围'};const result=InputValidator.number(value,options);input.value=result.value;syncNumberInput(type,result.value)}
+
+        function syncNumberInput(type,value){const options=type==='count'?{min:1,max:100,default:10,fieldName:'题目数量'}:{min:1,max:10000,default:20,fieldName:'数值范围'};const result=InputValidator.number(value,options);if(!result.valid&&result.error)console.warn(result.error);if(type==='count'){appState.questionCount=result.value;document.getElementById('questionCountInput').value=result.value}else{appState.numberRange=result.value;document.getElementById('numberRangeInput').value=result.value}return result.value}
+
+        function setQuestionMode(mode,element){appState.questionMode=mode;document.querySelectorAll('[name="mode"]').forEach(el=>{el.closest('.checkbox-item').classList.remove('selected')});element.classList.add('selected');const colSelect=document.getElementById('columnSelect');if(colSelect)colSelect.style.display=mode==='multi'?'block':'none'}
+
+        function setColumn(col,element){appState.columns=col;document.querySelectorAll('[name="col"]').forEach(el=>{el.closest('.checkbox-item').classList.remove('selected')});element.classList.add('selected')}
+
+        function setFractionMode(mode,element){
+            appState.fractionMode=mode;
+            document.querySelectorAll('[name="fractionMode"]').forEach(el=>{
+                el.closest('.checkbox-item').classList.remove('selected')
+            });
+            element.classList.add('selected');
+            const input=element.querySelector('input');
+            if(input)input.checked=true;
+            if(appState.questions.length>0&&appState.questions.some(q=>q.type&&q.type.startsWith('fraction'))){
+                if(appState.questionMode==='multi'){
+                    rerenderFractionQuestions()
+                }else{
+                    rerenderSingleFractionQuestion()
+                }
+            }
+        }
+        
+        function rerenderFractionQuestions(){
+            const area=document.getElementById('questionArea');
+            if(!area)return;
+            appState.questions.forEach((q,idx)=>{
+                if(!q.type.startsWith('fraction'))return;
+                const item=area.querySelector(`.question-item[data-index="${idx}"]`);
+                if(!item)return;
+                
+                const contentSpan=item.querySelector('.question-text');
+                if(!contentSpan)return;
+                const d=q.fractionData;
+                if(!d)return;
+                const{num1,den1,num2,den2,op}=d;
+                if(appState.fractionMode==='traditional'){
+                    contentSpan.innerHTML=`<div class="fraction-row">${createFractionHTML(num1,den1)}<span class="fraction-op">${op}</span>${createFractionHTML(num2,den2)}<span class="fraction-eq">=</span></div>`;
+                }else{
+                    contentSpan.textContent=`${num1}/${den1} ${op} ${num2}/${den2} = `;
+                }
+                
+                const answerSection=item.querySelector('.answer-section');
+                if(!answerSection)return;
+                
+                const userAns=appState.answers[idx]||'';
+                
+                if(appState.isSubmitted){
+                    updateFractionResultDisplay(item,q,idx);
+                }else{
+                    if(appState.fractionMode==='traditional'){
+                        const[numVal,denVal]=userAns.split('/');
+                        answerSection.innerHTML=`<div class="fraction-input-group"><input type="number" class="fraction-input" data-index="${idx}" data-part="num" onchange="saveFractionAnswer(${idx})" onkeydown="handleFractionEnter(event,${idx})" placeholder="" value="${numVal||''}"><div class="fraction-line" style="width:40px;margin:4px auto"></div><input type="number" class="fraction-input" data-index="${idx}" data-part="den" onchange="saveFractionAnswer(${idx})" onkeydown="handleFractionEnter(event,${idx})" placeholder="" value="${denVal||''}"></div><span class="result-icon" id="icon-${idx}"></span>`;
+                    }else{
+                        answerSection.innerHTML=`<input type="text" class="answer-input" data-index="${idx}" onchange="saveAnswer(${idx}, this.value)" onkeydown="handleEnter(event, ${idx})" placeholder="a/b" maxlength="10" autocomplete="off" value="${escapeHtml(userAns)}"><span class="result-icon" id="icon-${idx}"></span>`;
+                    }
+                }
+            });
+        }
+        
+        function rerenderSingleFractionQuestion(){
+            if(appState.questions.length===0)return;
+            const q=appState.questions[appState.currentQuestionIndex];
+            if(!q||!q.type.startsWith('fraction'))return;
+            const area=document.getElementById('questionArea');
+            if(!area)return;
+            
+            const currentInput=document.getElementById('singleInput');
+            if(currentInput){
+                appState.answers[appState.currentQuestionIndex]=currentInput.value.trim();
+            }
+            
+            renderSingleQuestion();
+        }
+        
+        function saveFractionAnswer(idx){
+            const item=document.querySelector(`.question-item[data-index="${idx}"]`);
+            if(!item)return;
+            const numInput=item.querySelector('.fraction-input[data-part="num"]');
+            const denInput=item.querySelector('.fraction-input[data-part="den"]');
+            if(numInput&&denInput){
+                const num=numInput.value.trim();
+                const den=denInput.value.trim();
+                if(num&&den){
+                    appState.answers[idx]=`${num}/${den}`;
+                }else{
+                    appState.answers[idx]='';
+                }
+            }
+        }
+        
+        function handleFractionEnter(event,idx){
+            if(event.key==='Enter'){
+                event.preventDefault();
+                if(idx===-1){
+                    const numInput=document.querySelector('#singleInput[data-part="num"]')||document.querySelector('.fraction-input[data-part="num"]');
+                    const denInput=document.querySelector('.fraction-input[data-part="den"]');
+                    if(numInput&&denInput){
+                        const num=numInput.value.trim();
+                        const den=denInput.value.trim();
+                        if(num&&den){
+                            appState.answers[appState.currentQuestionIndex]=`${num}/${den}`;
+                        }
+                        nextQuestion();
+                    }
+                }else{
+                    saveFractionAnswer(idx);
+                    const nextNumInput=document.querySelector(`.question-item[data-index="${idx+1}"] .fraction-input[data-part="num"]`);
+                    if(nextNumInput){
+                        nextNumInput.focus();
+                    }else{
+                        checkAnswers();
+                    }
+                }
+            }
+        }
+        
+        function updateFractionResultDisplay(item,q,idx){
+            const answerSection=item.querySelector('.answer-section');
+            const icon=item.querySelector('.result-icon');
+            if(!answerSection||!icon)return;
+            const userAns=appState.answers[idx]||'';
+            const isCorrect=userAns===q.answer;
+            const[numUser,denUser]=userAns.split('/');
+            const[numCorrect,denCorrect]=q.answer.split('/');
+            if(appState.fractionMode==='traditional'){
+                answerSection.innerHTML=`<div class="fraction-input-group"><input type="number" class="fraction-input" data-index="${idx}" data-part="num" disabled value="${numUser||''}" style="border-color:${isCorrect?'#81C784':'#E57373'}"><div class="fraction-line" style="width:40px;margin:4px auto"></div><input type="number" class="fraction-input" data-index="${idx}" data-part="den" disabled value="${denUser||''}" style="border-color:${isCorrect?'#81C784':'#E57373'}"></div><span class="result-icon" id="icon-${idx}"></span>`;
+                const newIcon=item.querySelector('.result-icon');
+                if(isCorrect){
+                    newIcon.innerHTML='<span class="icon-correct">✓</span>';
+                }else{
+                    newIcon.innerHTML='<span class="icon-wrong">✗</span><div style="display:inline-flex;flex-direction:column;align-items:center;margin-left:6px;font-size:14px;vertical-align:middle"><div style="border-bottom:1px solid #333;padding-bottom:2px;font-weight:bold;color:#D32F2F">'+numCorrect+'</div><div style="font-weight:bold;color:#D32F2F">'+denCorrect+'</div></div>';
+                }
+            }else{
+                answerSection.innerHTML=`<input type="text" class="answer-input ${isCorrect?'correct':'wrong'}" disabled value="${escapeHtml(userAns)}"><span class="result-icon" id="icon-${idx}"></span>`;
+                const newIcon=item.querySelector('.result-icon');
+                if(isCorrect){
+                    newIcon.innerHTML='<span class="icon-correct">✓</span>';
+                }else{
+                    newIcon.innerHTML='<span class="icon-wrong">✗</span><span class="correct-answer">('+escapeHtml(q.answer)+')</span>';
+                }
+            }
+        }
+        function generateQuestions(){if(!OperationLock.acquire('generate',5000))return;try{if(!validateGenerateParams()){OperationLock.release('generate');return}const isCustomMode=appState.currentTab==='custom';let types=isCustomMode?appState.selectedCustomTypes:mapOutlineToTypes(appState.outlineTypes);if(types.length===0)types=['mixed'];const count=appState.questionCount;const range=appState.numberRange;const newQuestions=[];for(let i=0;i<count;i++){let question,valid=false,attempts=0,maxAttempts=300;while(!valid&&attempts<maxAttempts){attempts++;const type=types[Math.floor(Math.random()*types.length)];question=generateSingleQuestion(type,range,appState.difficulty,appState.allowNegative);valid=validateQuestion(question,range,appState.allowNegative)}if(!valid){showModal('出题失败',`无法生成符合要求的题目（第${i+1}题）。\n建议：\n1. 增大数值范围\n2. 选择更简单的题型\n3. 关闭负数模式`);OperationLock.release('generate');return}newQuestions.push(question)}appState.questions=newQuestions;appState.answers={};appState.currentQuestionIndex=0;appState.isSubmitted=false;appState.hasScrolledToResult=false;document.getElementById('questionCard').style.display='block';document.getElementById('actionButtonsPanel').style.display='block';document.getElementById('resultPanel').style.display='block';document.getElementById('resultPanel').classList.add('visible');document.getElementById('scoreDisplay').style.display='none';document.getElementById('scorePlaceholder').style.display='block';document.getElementById('timerStats').style.display='none';document.getElementById('studentInfoCard').style.display='block';const printHeader=document.getElementById('printHeader');if(printHeader){printHeader.style.display='block';printHeader.classList.add('visible')}updatePrintHeader();updateMetaRow();renderQuestions();startTimer();if(appState.questionMode==='single'){document.getElementById('singleNavigation').style.display='flex'}else{document.getElementById('singleNavigation').style.display='none'}document.getElementById('questionCard').scrollIntoView({behavior:'smooth',block:'start'})}catch(error){console.error('Generate questions error:',error);showModal('❌ 出题异常','生成题目时发生错误：'+error.message)}finally{OperationLock.release('generate')}}
+
+        function validateGenerateParams(){const isCustomMode=appState.currentTab==='custom';const selectedTypes=isCustomMode?appState.selectedCustomTypes:appState.outlineTypes;if(!isCustomMode){if(!Array.isArray(selectedTypes)||selectedTypes.length===0){showModal('提示','请至少选择一种大纲题型！');return false}const safeTypes=selectedTypes.filter(t=>typeof t==='string'&&t.length<100&&t!=='__proto__'&&t!=='constructor');if(safeTypes.length!==selectedTypes.length){console.warn('[安全警告] 大纲题型包含可疑值，已清理');appState.outlineTypes=safeTypes}if(safeTypes.length===0){showModal('提示','请至少选择一种大纲题型！');return false}}else{const validTypeValues=['add','sub','multi','div','multiply','divide','mixed','mixed-2','mixed-3','bracket','fill','complex','four-mixed','carry','borrow','remainder','vertical','step','fraction-add','fraction-sub','fraction-mul','fraction-div'];const typeValidation=InputValidator.array(selectedTypes,validTypeValues,false);if(!typeValidation.valid||typeValidation.value.length===0){showModal('提示','请至少选择一种自定义题型！');return false}appState.selectedCustomTypes=typeValidation.value}const rangeCheck=InputValidator.number(appState.numberRange,{min:1,max:10000,fieldName:'数值范围'});if(!rangeCheck.valid)appState.numberRange=rangeCheck.value;if(selectedTypes.includes('remainder')&&appState.numberRange<10){showModal('⚠️ 范围过小','带余数的除法需要更大的数值范围（建议≥10），已自动调整为10');appState.numberRange=10;document.getElementById('numberRangeInput').value=10}const countCheck=InputValidator.number(appState.questionCount,{min:1,max:100,fieldName:'题目数量'});if(!countCheck.valid){appState.questionCount=countCheck.value;document.getElementById('questionCountInput').value=countCheck.value}if(appState.questionCount<1){showModal('提示','题目数量不能为0，请至少选择1道题！');return false}return true}
+
+        function updateMetaRow(){document.getElementById('metaCount').textContent=appState.questionCount+'题';const diffMap={'easy':'初入江湖','medium':'小有成就','hard':'身手不凡'};document.getElementById('metaDifficulty').textContent=diffMap[appState.difficulty]||'--';document.getElementById('metaRange').textContent='1-'+appState.numberRange;let typeText='';if(appState.currentTab==='custom'){const typeNameMap={'add':'纯加法','sub':'纯减法','multi':'连加法','div':'连减法','multiply':'乘法','divide':'除法','mixed':'加减混合','mixed-2':'两数加减混合','mixed-3':'三数加减混合','bracket':'带括号','fill':'填空题','complex':'混合运算','four-mixed':'四则混合','carry':'加法进位','borrow':'减法退位','remainder':'带余数除法','vertical':'竖式计算','step':'脱式计算','fraction-add':'分数加法','fraction-sub':'分数减法','fraction-mul':'分数乘法','fraction-div':'分数除法'};typeText=appState.selectedCustomTypes.map(t=>typeNameMap[t]||t).join('、')}else{typeText=appState.outlineTypes.join('、')}const metaTypes=document.getElementById('metaTypes');metaTypes.textContent=typeText||'--';metaTypes.title=typeText}
+
+        function updatePrintHeader(){let school=document.getElementById('schoolInput').value||'';let cls=document.getElementById('classInput').value||'';let name=document.getElementById('nameInput').value||'';document.getElementById('printSchool').textContent=school||'__________';document.getElementById('printClass').textContent=cls||'__________';document.getElementById('printName').textContent=name||'__________';updateDateTime()}
+
+        function validateQuestion(q,maxRange,allowNegative){if(!q||!q.display)return false;const parts=(q.display||'').match(/\d+/g);const numbers=parts?parts.map(Number):[];for(let num of numbers){if(num>maxRange)return false;if(!allowNegative&&num<0)return false}const answer=parseInt(q.answer);if(isNaN(answer)){if(q.answer&&q.answer.includes('...')){const[quotient,remainder]=q.answer.split('...').map(Number);if(quotient>maxRange||remainder>maxRange)return false;if(!allowNegative&&(quotient<0||remainder<0))return false}return true}if(answer>maxRange)return false;if(!allowNegative&&answer<0)return false;return true}
+
+        function mapOutlineToTypes(outlineTypes){const typeMap={'10以内加法':['add'],'10以内减法':['sub'],'20以内加法':['add'],'20以内减法':['sub'],'20以内不退位减法':['sub'],'20以内退位减法':['borrow'],'20以内加减混合运算':['mixed','mixed-2','mixed-3'],'平10法和破10法':['sub','borrow'],'100以内加减法':['add','sub','carry','borrow'],'100以内连加连减混合':['multi','div'],'乘法认识和口诀':['multiply'],'除法认识和求商':['divide'],'有余数的除法':['remainder'],'万以内数的加减法':['add','sub','carry','borrow'],'万以内连加连减混合':['multi','div','mixed'],'乘除加减两步混合':['complex','mixed'],'一位数乘两三位数':['multiply'],'元角分小数加减':['mixed'],'一位数除两三位数':['divide'],'两位数乘两位数':['multiply'],'同分母分数加减':['mixed'],'三位数乘两位数':['multiply'],'三位数除以两位数':['divide'],'运算律及混合运算':['bracket','four-mixed'],'常见数量关系':['mixed'],'小数加减法':['add','sub'],'小数乘法':['multiply'],'分数加减法':['mixed'],'分数乘法':['multiply'],'分数除法':['divide'],'分数混合运算':['bracket','four-mixed'],'百分数应用':['complex'],'分数加法':['fraction-add'],'分数减法':['fraction-sub'],'分数乘法':['fraction-mul'],'分数除法':['fraction-div']};let result=[];outlineTypes.forEach(type=>{if(typeMap[type])result=result.concat(typeMap[type])});return[...new Set(result)]}
+                Math.gcd=function(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
+        const createFractionHTML=(num,den)=>`<div class="fraction"><div class="fraction-num">${num}</div><div class="fraction-line"></div><div class="fraction-den">${den}</div></div>`;
+
+        
+        function generateSingleQuestion(type,range,difficulty,allowNegative){
+            let num1,num2,num3,num4,answer,display,isFillBlank=false,fractionData=null;
+            let maxNum=Math.max(1,Math.floor(range));
+            const rand=(min,max)=>{min=Math.max(0,Math.floor(min));max=Math.max(min,Math.floor(max));return Math.floor(Math.random()*(max-min+1))+min};
+            switch(type){
+                case'add':num1=rand(1,maxNum);num2=rand(0,maxNum-num1);if(!allowNegative&&num2>num1)[num1,num2]=[num2,num1];answer=num1+num2;display=`${num1} + ${num2} = `;break;
+                case'sub':if(allowNegative){num1=rand(0,maxNum);num2=rand(0,maxNum)}else{num1=rand(0,maxNum);num2=rand(0,num1)}answer=num1-num2;display=`${num1} - ${num2} = `;break;
+                case'multi':num1=rand(0,Math.floor(maxNum/3));num2=rand(0,Math.floor((maxNum-num1)/2));num3=rand(0,maxNum-num1-num2);answer=num1+num2+num3;display=`${num1} + ${num2} + ${num3} = `;break;
+                case'div':num1=rand(0,maxNum);let remaining=num1;num2=rand(0,allowNegative?maxNum:remaining);remaining-=num2;num3=rand(0,allowNegative?maxNum:Math.max(0,remaining));answer=num1-num2-num3;if(!allowNegative&&answer<0){num1=rand(50,maxNum);num2=rand(0,Math.floor(num1/2));num3=rand(0,num1-num2);answer=num1-num2-num3}display=`${num1} - ${num2} - ${num3} = `;break;
+                case'multiply':if(allowNegative){num1=rand(0,Math.floor(Math.sqrt(maxNum))+2);num2=rand(0,Math.floor(Math.sqrt(maxNum))+2)}else{num1=rand(0,Math.floor(Math.sqrt(maxNum)));num2=rand(0,Math.floor(Math.sqrt(maxNum)))}answer=num1*num2;display=`${num1} × ${num2} = `;break;
+                case'divide':if(allowNegative){num2=rand(1,9);answer=rand(0,Math.floor(maxNum/num2));num1=num2*answer}else{num2=rand(1,9);answer=rand(0,Math.floor(maxNum/num2));num1=num2*answer}display=`${num1} ÷ ${num2} = `;break;
+                case'four-mixed':const pattern=rand(0,2);if(pattern===0){num2=rand(0,Math.floor(Math.sqrt(maxNum))+1);num3=rand(0,Math.floor(Math.sqrt(maxNum))+1);num1=rand(0,maxNum-num2*num3);answer=num1+num2*num3;display=`${num1} + ${num2} × ${num3} = `}else if(pattern===1){num1=rand(0,Math.floor(maxNum/4));num2=rand(0,Math.floor(maxNum/4));num3=rand(0,Math.floor(maxNum/(num1+num2||1)));answer=(num1+num2)*num3;display=`(${num1} + ${num2}) × ${num3} = `}else{num1=rand(0,Math.floor(Math.sqrt(maxNum/2))+1);num2=rand(0,Math.floor(Math.sqrt(maxNum/2))+1);num3=rand(0,Math.floor(Math.sqrt(maxNum/2))+1);num4=rand(0,Math.floor((maxNum-num1*num2)/(num3||1)));answer=num1*num2+num3*num4;display=`${num1} × ${num2} + ${num3} × ${num4} = `}break;
+                case'mixed':if(Math.random()>0.5){num1=rand(0,maxNum);num2=rand(0,maxNum-num1);answer=num1+num2;display=`${num1} + ${num2} = `}else{num1=rand(0,maxNum);num2=rand(0,allowNegative?maxNum:num1);answer=num1-num2;display=`${num1} - ${num2} = `}break;
+                case'mixed-2':if(Math.random()>0.5){num1=rand(1,maxNum);num2=rand(0,maxNum-num1);answer=num1+num2;display=`${num1} + ${num2} = `}else{num1=rand(1,maxNum);num2=rand(0,allowNegative?maxNum:num1);answer=num1-num2;display=`${num1} - ${num2} = `}break;
+                case'mixed-3':const m3Type=rand(0,2);if(m3Type===0){num1=rand(1,maxNum);num2=rand(0,Math.min(maxNum-num1,maxNum));const sum=num1+num2;num3=rand(0,allowNegative?maxNum:sum);answer=sum-num3;display=`${num1} + ${num2} - ${num3} = `}else if(m3Type===1){num1=rand(1,maxNum);num2=rand(0,allowNegative?maxNum:num1);const diff=num1-num2;num3=rand(0,allowNegative?maxNum:(maxNum-diff));answer=diff+num3;display=`${num1} - ${num2} + ${num3} = `}else{num1=rand(2,maxNum);num2=rand(0,allowNegative?maxNum:num1);const diff1=num1-num2;num3=rand(0,allowNegative?maxNum:diff1);answer=diff1-num3;display=`${num1} - ${num2} - ${num3} = `}break;
+                case'bracket':let success=false,attempts=0;while(!success&&attempts<100){attempts++;num1=rand(0,Math.floor(maxNum/2));num2=rand(0,Math.floor(maxNum/2));num3=rand(0,Math.floor(maxNum/2));const bracketType=Math.random();if(bracketType<0.33){const inner=num2-num3;answer=num1+inner;if(Math.abs(inner)<=maxNum&&Math.abs(answer)<=maxNum){if(!allowNegative&&(inner<0||answer<0))continue;display=`${num1} + (${num2} - ${num3}) = `;success=true}}else if(bracketType<0.66){const inner=num2+num3;answer=num1-inner;if(inner<=maxNum&&Math.abs(answer)<=maxNum){if(!allowNegative&&answer<0)continue;display=`${num1} - (${num2} + ${num3}) = `;success=true}}else{const inner=num1+num2;answer=inner-num3;if(inner<=maxNum&&Math.abs(answer)<=maxNum){if(!allowNegative&&answer<0)continue;display=`(${num1} + ${num2}) - ${num3} = `;success=true}}}if(!success){num1=rand(0,Math.floor(maxNum/2));num2=rand(0,maxNum-num1);answer=num1+num2;display=`${num1} + ${num2} = `}break;
+                case'fill':if(Math.random()>0.5){num2=rand(0,maxNum);answer=rand(0,maxNum-num2);num1=answer;display=`__ + ${num2} = ${num1+num2}`}else{num1=rand(0,maxNum);answer=allowNegative?rand(0,maxNum):rand(0,num1);num2=num1-answer;display=`${num1} - __ = ${answer}`}isFillBlank=true;break;
+                case'complex':num1=rand(0,Math.floor(Math.sqrt(maxNum))+1);num2=rand(0,Math.floor(Math.sqrt(maxNum))+1);const product=num1*num2;num3=rand(0,maxNum-product);answer=product+num3;display=`${num1} × ${num2} + ${num3} = `;break;
+                case'carry':const unit1=rand(5,9);const unit2=rand(10-unit1,9);const ten1=rand(1,Math.floor(maxNum/10)-1);const ten2=rand(0,Math.floor((maxNum-ten1*10)/10));num1=ten1*10+unit1;num2=ten2*10+unit2;if(num1+num2>maxNum){num1=Math.min(num1,Math.floor(maxNum/2));num2=rand(50,maxNum-num1)}answer=num1+num2;display=`${num1} + ${num2} = `;break;
+                case'borrow':const u1=rand(0,8);const u2=rand(u1+1,9);const t1=rand(1,Math.floor(maxNum/10));const t2=rand(0,t1);num1=t1*10+u1;num2=t2*10+u2;if(!allowNegative&&num2>num1)num1=num2+rand(1,10);answer=num1-num2;if(answer<0&&!allowNegative){num1=num2+rand(1,maxNum-num2);answer=num1-num2}display=`${num1} - ${num2} = `;break;
+                case'remainder':let remainderSuccess=false;let remainderAttempts=0;const maxRemainderAttempts=100;while(!remainderSuccess&&remainderAttempts<maxRemainderAttempts){remainderAttempts++;const safeMax=Math.max(10,maxNum);num2=rand(2,Math.min(9,safeMax));const maxQuotient=Math.floor((safeMax-1)/num2);if(maxQuotient<1)continue;const quotient=rand(1,maxQuotient);const remainder=rand(1,num2-1);num1=num2*quotient+remainder;if(num1>safeMax)num1=Math.min(num1,safeMax);answer=`${quotient}...${remainder}`;display=`${num1} ÷ ${num2} = `;remainderSuccess=true}if(!remainderSuccess)return generateSingleQuestion('divide',range,difficulty,allowNegative);break;
+                case'vertical':{
+                    const vType=rand(0,3);
+                    const makeVertical=(n1,n2,op,ans)=>{
+                        const len=Math.max(String(n1).length,String(n2).length);
+                        const line='─'.repeat(len+2);
+                        return `<div class="vertical-calc"><div class="v-num">${String(n1).padStart(len+1,' ')}</div><div class="v-op">${op}${String(n2).padStart(len,' ')}</div><div class="v-line">${line}</div><div class="v-ans">${''.padStart(len+1,' ')}</div></div>`;
+                    };
+                    if(vType===0){
+                        num1=rand(50,maxNum);num2=rand(50,maxNum);
+                        if(num1+num2>maxNum){num1=Math.floor(maxNum/2);num2=rand(10,maxNum-num1)}
+                        answer=num1+num2;
+                        display=makeVertical(num1,num2,'+',answer);
+                    }else if(vType===1){
+                        num1=rand(50,maxNum);num2=rand(10,num1);
+                        answer=num1-num2;
+                        display=makeVertical(num1,num2,'-',answer);
+                    }else if(vType===2){
+                        num1=rand(10,Math.floor(Math.sqrt(maxNum)));num2=rand(2,Math.floor(Math.sqrt(maxNum)));
+                        answer=num1*num2;
+                        display=makeVertical(num1,num2,'×',answer);
+                    }else{
+                        num2=rand(2,9);answer=rand(10,Math.floor(maxNum/num2));num1=num2*answer;
+                        display=makeVertical(num1,num2,'÷',answer);
+                    }
+                    break;
+                }
+                case'step':const stepType=rand(0,4);let stepExpr='';let stepAnswer=0;if(stepType===0){num1=rand(10,Math.floor(maxNum/3));num2=rand(10,Math.floor(maxNum/3));num3=rand(5,Math.floor(maxNum/3));stepExpr=`${num1} + ${num2} - ${num3}`;stepAnswer=num1+num2-num3}else if(stepType===1){num1=rand(2,Math.floor(Math.sqrt(maxNum)));num2=rand(2,Math.floor(Math.sqrt(maxNum)));num3=rand(5,Math.floor(maxNum-num1*num2));stepExpr=`${num1} × ${num2} + ${num3}`;stepAnswer=num1*num2+num3}else if(stepType===2){num1=rand(2,Math.floor(Math.sqrt(maxNum))+5);num2=rand(2,Math.floor(Math.sqrt(maxNum)));num3=rand(5,num1*num2-10);stepExpr=`${num1} × ${num2} - ${num3}`;stepAnswer=num1*num2-num3}else if(stepType===3){num1=rand(10,Math.floor(maxNum/2));num2=rand(5,Math.floor(maxNum/4));num3=rand(5,Math.floor(maxNum/4));if(Math.random()>0.5){stepExpr=`${num1} + (${num2} + ${num3})`;stepAnswer=num1+num2+num3}else{stepExpr=`${num1} + (${num2} - ${num3})`;stepAnswer=num1+num2-num3}}else{num1=rand(2,Math.floor(Math.sqrt(maxNum)));num2=rand(2,9);num3=rand(2,9);stepExpr=`(${num1} + ${num2}) × ${num3}`;stepAnswer=(num1+num2)*num3}if(!allowNegative&&stepAnswer<0){num1=rand(10,Math.floor(maxNum/2));num2=rand(10,maxNum-num1);stepExpr=`${num1} + ${num2}`;stepAnswer=num1+num2}if(stepAnswer>maxNum){num1=rand(5,50);num2=rand(5,50);stepExpr=`${num1} + ${num2}`;stepAnswer=num1+num2}answer=stepAnswer;display=stepExpr+' = ';break;
+                case'fraction-add':{const den1=rand(2,12);const den2=rand(2,12);const commonDen=den1*den2/Math.gcd(den1,den2);const num1=rand(1,Math.floor(maxNum/den1))*den1;const num2=rand(1,Math.floor(maxNum/den2))*den2;const sumNum=num1*(commonDen/den1)+num2*(commonDen/den2);const gcd=Math.gcd(sumNum,commonDen);answer=`${sumNum/gcd}/${commonDen/gcd}`;if(appState.fractionMode==='traditional'){display=`<div class="fraction-row">${createFractionHTML(num1,den1)}<span class="fraction-op">+</span>${createFractionHTML(num2,den2)}<span class="fraction-eq">=</span></div>`;}else{display=`${num1}/${den1} + ${num2}/${den2} = `;}fractionData={num1,den1,num2,den2,op:'+'};break;}
+                case'fraction-sub':{const den1=rand(2,12);const den2=rand(2,12);const commonDen=den1*den2/Math.gcd(den1,den2);let num1=rand(2,Math.floor(maxNum/den1))*den1;let num2=rand(1,Math.floor((num1-1)/den2))*den2;const diffNum=num1*(commonDen/den1)-num2*(commonDen/den2);const gcd=Math.gcd(diffNum,commonDen);answer=`${diffNum/gcd}/${commonDen/gcd}`;if(appState.fractionMode==='traditional'){display=`<div class="fraction-row">${createFractionHTML(num1,den1)}<span class="fraction-op">-</span>${createFractionHTML(num2,den2)}<span class="fraction-eq">=</span></div>`;}else{display=`${num1}/${den1} - ${num2}/${den2} = `;}fractionData={num1,den1,num2,den2,op:'-'};break;}
+                case'fraction-mul':{const den1=rand(2,10);const den2=rand(2,10);const num1=rand(1,Math.floor(maxNum/den1));const num2=rand(1,Math.floor(maxNum/den2));const prodNum=num1*num2;const prodDen=den1*den2;const gcd=Math.gcd(prodNum,prodDen);answer=`${prodNum/gcd}/${prodDen/gcd}`;if(appState.fractionMode==='traditional'){display=`<div class="fraction-row">${createFractionHTML(num1,den1)}<span class="fraction-op">×</span>${createFractionHTML(num2,den2)}<span class="fraction-eq">=</span></div>`;}else{display=`${num1}/${den1} × ${num2}/${den2} = `;}fractionData={num1,den1,num2,den2,op:'×'};break;}
+                case'fraction-div':{const den1=rand(2,10);const den2=rand(2,10);const num1=rand(1,Math.floor(maxNum/den1));const num2=rand(1,Math.floor(maxNum/den2));const quoNum=num1*den2;const quoDen=den1*num2;const gcd=Math.gcd(quoNum,quoDen);answer=`${quoNum/gcd}/${quoDen/gcd}`;if(appState.fractionMode==='traditional'){display=`<div class="fraction-row">${createFractionHTML(num1,den1)}<span class="fraction-op">÷</span>${createFractionHTML(num2,den2)}<span class="fraction-eq">=</span></div>`;}else{display=`${num1}/${den1} ÷ ${num2}/${den2} = `;}fractionData={num1,den1,num2,den2,op:'÷'};break;}
+                default:num1=rand(0,maxNum);num2=rand(0,maxNum-num1);answer=num1+num2;display=`${num1} + ${num2} = `
+            }
+            const q={id:Date.now()+Math.random(),display:display,originalDisplay:display,answer:answer.toString(),type:type,isFillBlank:isFillBlank,fractionData:fractionData};return q
+        }
+
+        function renderQuestions(){if(appState.questionMode==='single')renderSingleQuestion();else renderMultiQuestions()}
+
+        function shouldUseMultiLine(display){if(!display)return false;if(display.includes('fraction'))return true;let estimatedWidth=0;for(let char of display)estimatedWidth+=(char.charCodeAt(0)>127)?1.5:1;const threshold=window.innerWidth<480?15:(window.innerWidth<768?20:25);return estimatedWidth>threshold}
+
+        function renderMultiQuestions(){const area=document.getElementById('questionArea');area.className=`question-area question-grid col-${appState.columns}`;let html='';appState.questions.forEach((q,idx)=>{const isLongQuestion=shouldUseMultiLine(q.display)||q.type.startsWith('fraction');const multiLineClass=isLongQuestion?'multi-line':'';const isFraction=q.type.startsWith('fraction');let answerSection;if(isFraction&&!appState.isSubmitted){if(appState.fractionMode==='traditional'){const[numAns,denAns]=q.answer.split('/');answerSection=`<div class="answer-section"><div class="fraction-input-group"><input type="number" class="fraction-input" data-index="${idx}" data-part="num" onchange="saveFractionAnswer(${idx})" onkeydown="handleFractionEnter(event,${idx})" placeholder="" value="${(appState.answers[idx]||'').split('/')[0]||''}"><div class="fraction-line" style="width:40px;margin:4px auto"></div><input type="number" class="fraction-input" data-index="${idx}" data-part="den" onchange="saveFractionAnswer(${idx})" onkeydown="handleFractionEnter(event,${idx})" placeholder="" value="${(appState.answers[idx]||'').split('/')[1]||''}"></div><span class="result-icon" id="icon-${idx}"></span></div>`}else{answerSection=`<div class="answer-section"><input type="text" class="answer-input" data-index="${idx}" onchange="saveAnswer(${idx}, this.value)" onkeydown="handleEnter(event, ${idx})" placeholder="a/b" maxlength="10" autocomplete="off" value="${escapeHtml(appState.answers[idx]||'')}"><span class="result-icon" id="icon-${idx}"></span></div>`}}else if(isFraction&&appState.isSubmitted){const userAns=appState.answers[idx]||'';const isCorrect=userAns===q.answer;const[numUser,denUser]=userAns.split('/');const[numCorrect,denCorrect]=q.answer.split('/');let userDisplay,correctDisplay;if(appState.fractionMode==='traditional'){userDisplay=numUser?`<div class="fraction" style="margin:0"><div class="fraction-num">${numUser}</div><div class="fraction-line"></div><div class="fraction-den">${denUser}</div></div>`:'<span style="color:#999">未答</span>';correctDisplay=`<div class="fraction" style="margin:0"><div class="fraction-num">${numCorrect}</div><div class="fraction-line"></div><div class="fraction-den">${denCorrect}</div></div>`;}else{userDisplay=numUser?`<span style="font-weight:bold;color:${isCorrect?'#00C853':'#FF1744'}">${numUser}/${denUser}</span>`:'<span style="color:#999">未答</span>';correctDisplay=`<span style="font-weight:bold;color:#00C853">${numCorrect}/${denCorrect}</span>`;}answerSection=`<div class="answer-section" style="flex-direction:column;gap:5px"><div style="display:flex;align-items:center;gap:8px">${userDisplay}<span class="result-icon" id="icon-${idx}"></span></div>${!isCorrect?`<div style="font-size:12px;color:#666">正确：${correctDisplay}</div>`:''}</div>`}else{answerSection=`<div class="answer-section"><input type="text" class="answer-input" data-index="${idx}" onchange="saveAnswer(${idx}, this.value)" onkeydown="handleEnter(event, ${idx})" oninput="sanitizeInput(this)" maxlength="20" autocomplete="off" ${appState.isSubmitted?'disabled':''} value="${escapeHtml(appState.answers[idx]||'')}" placeholder=""><span class="result-icon" id="icon-${idx}"></span></div>`}html+=`<div class="question-item ${multiLineClass}" data-id="${q.id}" data-index="${idx}"><div class="question-content"><span class="question-number">${idx+1}.</span><span class="question-text">${q.type.startsWith('fraction')?(appState.fractionMode==='traditional'&&q.fractionData?`<div class="fraction-row">${createFractionHTML(q.fractionData.num1,q.fractionData.den1)}<span class="fraction-op">${q.fractionData.op}</span>${createFractionHTML(q.fractionData.num2,q.fractionData.den2)}<span class="fraction-eq">=</span></div>`:(q.fractionData?`${q.fractionData.num1}/${q.fractionData.den1} ${q.fractionData.op} ${q.fractionData.num2}/${q.fractionData.den2} = `:q.display)):q.display}</span></div>${answerSection}</div>`});area.innerHTML=html;setTimeout(()=>adjustLayoutOnResize(),100)}
+
+        function adjustLayoutOnResize(){const items=document.querySelectorAll('.question-item');items.forEach(item=>{const text=item.querySelector('.question-text');const display=text?text.textContent:'';const shouldMulti=shouldUseMultiLine(display);if(shouldMulti&&!item.classList.contains('multi-line'))item.classList.add('multi-line');else if(!shouldMulti&&item.classList.contains('multi-line'))item.classList.remove('multi-line')})}
+
+        function renderSingleQuestion(){
+            const area=document.getElementById('questionArea');
+            area.className='question-area single-question-mode';
+            const q=appState.questions[appState.currentQuestionIndex];
+            const total=appState.questions.length;
+            const current=appState.currentQuestionIndex+1;
+            
+            // 构建题目显示HTML
+            let questionDisplay='';
+            if(q.type.startsWith('fraction')){
+                if(appState.fractionMode==='traditional'&&q.fractionData){
+                    questionDisplay=`<div class="fraction-row" style="font-size:clamp(28px,5vw,42px)">${createFractionHTML(q.fractionData.num1,q.fractionData.den1)}<span class="fraction-op">${q.fractionData.op}</span>${createFractionHTML(q.fractionData.num2,q.fractionData.den2)}<span class="fraction-eq">=</span></div>`;
+                }else if(q.fractionData){
+                    questionDisplay=`${q.fractionData.num1}/${q.fractionData.den1} ${q.fractionData.op} ${q.fractionData.num2}/${q.fractionData.den2} = `;
+                }else{
+                    questionDisplay=escapeHtml(q.display);
+                }
+            }else{
+                questionDisplay=escapeHtml(q.display);
+            }
+            
+            // 构建输入框HTML
+            let inputHtml='';
+            const userAns=appState.answers[appState.currentQuestionIndex]||'';
+            
+            if(appState.isSubmitted){
+                // 已提交状态：显示答案和结果
+                const isCorrect=userAns===q.answer;
+                inputHtml=`<div class="question-input-h"><input type="text" class="answer-input ${isCorrect?'correct':'wrong'}" disabled value="${escapeHtml(userAns)}" style="width:140px;font-size:28px;padding:12px;"></div>`;
+            }else{
+                // 未提交状态：可编辑输入框
+                if(q.type.startsWith('fraction')&&appState.fractionMode==='traditional'){
+                    const[numVal,denVal]=userAns.split('/');
+                    inputHtml=`<div class="question-input-h"><div class="fraction-input-group" style="transform:scale(1.3)"><input type="number" class="fraction-input" id="singleInput" data-part="num" onkeydown="handleFractionEnter(event,-1)" placeholder="" value="${numVal||''}" style="width:60px;height:40px;font-size:20px"><div class="fraction-line" style="width:50px;margin:4px auto"></div><input type="number" class="fraction-input" data-part="den" onkeydown="handleFractionEnter(event,-1)" placeholder="" value="${denVal||''}" style="width:60px;height:40px;font-size:20px"></div></div>`;
+                }else{
+                    inputHtml=`<div class="question-input-h"><input type="text" class="answer-input" id="singleInput" onkeydown="handleEnter(event, -1)" oninput="sanitizeInput(this)" maxlength="20" autocomplete="off" placeholder="?" value="${escapeHtml(userAns)}" style="width:140px;font-size:28px;padding:12px;"></div>`;
+                }
+            }
+            
+            // 构建结果HTML（已提交时显示）
+            let resultHtml='';
+            if(appState.isSubmitted){
+                const isCorrect=userAns===q.answer;
+                const[numCorrect,denCorrect]=q.answer.split('/');
+                if(q.type.startsWith('fraction')&&appState.fractionMode==='traditional'){
+                    resultHtml=`<div class="question-result-h"><div class="single-result-inline ${isCorrect?'correct':'wrong'}"><span class="${isCorrect?'icon-correct':'icon-wrong'}">${isCorrect?'✓':'✗'}</span>${isCorrect?'正确!':'错误'}<div class="single-result-answer">正确答案: <div class="fraction" style="display:inline-flex;margin-left:5px"><div class="fraction-num">${numCorrect}</div><div class="fraction-line"></div><div class="fraction-den">${denCorrect}</div></div></div></div></div>`;
+                }else{
+                    resultHtml=`<div class="question-result-h"><div class="single-result-inline ${isCorrect?'correct':'wrong'}"><span class="${isCorrect?'icon-correct':'icon-wrong'}">${isCorrect?'✓':'✗'}</span><div>${isCorrect?'回答正确!':'回答错误'}</div>${!isCorrect?`<div class="single-result-answer">正确答案: ${escapeHtml(q.answer)}</div>`:''}</div></div>`;
+                }
+            }
+            
+            area.innerHTML=`<div style="font-size:16px;color:#666;margin-bottom:15px">第 ${current} / ${total} 题</div>
+            <div class="single-question-horizontal">
+                <div class="question-display-h">${questionDisplay}</div>
+                ${inputHtml}
+                ${resultHtml}
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${(current/total*100)}%"></div></div>`;
+            
+            document.getElementById('questionCounter').textContent=`${current}/${total}`;
+            
+            // 自动聚焦
+            setTimeout(()=>{
+                if(!appState.isSubmitted){
+                    const input=document.getElementById('singleInput');
+                    if(input)input.focus();
+                }
+            },100);
+        }
+
+        function saveAnswer(index,value){const rawValue=(value||'').trim();const dangerousPatterns=[/<script\b/gi,/javascript:/gi,/on\w+\s*=/gi];let safeValue=rawValue;dangerousPatterns.forEach(pattern=>{if(pattern.test(safeValue)){console.warn('[XSS防御] 检测到潜在危险输入，已清理:',rawValue);safeValue=safeValue.replace(pattern,'')}});safeValue=safeValue.slice(0,20);if(index===-1)index=appState.currentQuestionIndex;appState.answers[index]=safeValue}
+
+        function sanitizeInput(inputElement){const q=appState.questions[inputElement.dataset.index||appState.currentQuestionIndex];const isNumeric=q&&!['fill','remainder'].includes(q.type);if(isNumeric){inputElement.value=inputElement.value.replace(/[^-\d.]/g,'');const parts=inputElement.value.split('-');if(parts.length>2)inputElement.value='-'+parts.slice(1).join('');const dotParts=inputElement.value.split('.');if(dotParts.length>2)inputElement.value=dotParts[0]+'.'+dotParts.slice(1).join('')}}
+
+        function handleEnter(event,index){if(event.key==='Enter'){event.preventDefault();if(appState.questionMode==='single'){saveAnswer(-1,event.target.value);nextQuestion()}else{const nextInput=document.querySelector(`[data-index="${index+1}"]`);if(nextInput)nextInput.focus();else checkAnswers()}}}
+
+        function nextQuestion(){if(appState.currentQuestionIndex<appState.questions.length-1){appState.currentQuestionIndex++;renderSingleQuestion()}}
+        function prevQuestion(){if(appState.currentQuestionIndex>0){appState.currentQuestionIndex--;renderSingleQuestion()}}
+
+        function handleKeyboard(e){const questionCard=document.getElementById('questionCard');if(e.key==='Escape'){const modal=document.getElementById('modal');if(modal&&modal.classList.contains('active')){closeModal();return}}if(e.ctrlKey&&e.key==='p'){e.preventDefault();if(questionCard&&questionCard.style.display!=='none')printQuestions();return}if(appState.questionMode==='single'&&questionCard&&questionCard.style.display!=='none'&&!appState.isSubmitted){if(e.key==='ArrowLeft')prevQuestion();if(e.key==='ArrowRight')nextQuestion()}}
+
+        function checkAnswers(){OperationLock.run('check',()=>{doCheckAnswers()},(error)=>{showModal('❌ 评分失败','提交答案时出现错误：'+error.message);appState.isSubmitted=false})}
+
+        function doCheckAnswers(){stopTimer();appState.isSubmitted=true;let correct=0;const total=appState.questions.length;if(appState.questionMode==='single'){const input=document.getElementById('singleInput');if(input)appState.answers[appState.currentQuestionIndex]=input.value.trim();renderSingleQuestion()}else{appState.questions.forEach((q,idx)=>{const userAns=(appState.answers[idx]||'').trim();const isCorrect=userAns===q.answer;if(isCorrect)correct++;const item=document.querySelector(`.question-item[data-index="${idx}"]`);const icon=item?item.querySelector('.result-icon'):null;if(!item||!icon)return;const isFraction=q.type.startsWith('fraction');if(isFraction&&appState.fractionMode==='traditional'){const numInput=item.querySelector('.fraction-input[data-part="num"]');const denInput=item.querySelector('.fraction-input[data-part="den"]');if(numInput&&denInput){numInput.disabled=true;denInput.disabled=true;numInput.style.borderColor=isCorrect?'#81C784':'#E57373';denInput.style.borderColor=isCorrect?'#81C784':'#E57373';const[numCorrect,denCorrect]=q.answer.split('/');if(isCorrect){icon.innerHTML='<span class="icon-correct">✓</span>';}else{icon.innerHTML='<span class="icon-wrong">✗</span><div style="display:inline-flex;flex-direction:column;align-items:center;margin-left:6px;font-size:14px;vertical-align:middle"><div style="border-bottom:1px solid #333;padding-bottom:2px;font-weight:bold;color:#D32F2F">'+numCorrect+'</div><div style="font-weight:bold;color:#D32F2F">'+denCorrect+'</div></div>';}}}else{const input=item.querySelector('.answer-input');if(input){input.className='answer-input '+(isCorrect?'correct':'wrong');input.disabled=true;if(isCorrect)icon.innerHTML='<span class="icon-correct">✓</span>';else icon.innerHTML='<span class="icon-wrong">✗</span><span class="correct-answer">('+escapeHtml(q.answer)+')</span>';}}})}let finalCorrect=0;appState.questions.forEach((q,idx)=>{if(appState.answers[idx]===q.answer)finalCorrect++});document.getElementById('printScore').textContent=`${finalCorrect}/${total}`;showResults(finalCorrect,total);if(!appState.hasScrolledToResult){appState.hasScrolledToResult=true;document.getElementById('resultPanel').scrollIntoView({behavior:'smooth',block:'center'})}if(finalCorrect===total)startCelebration()}
+
+function quickCheck(){OperationLock.run('check',()=>{doQuickCheck()},(err)=>{showModal('❌ 评分失败','提交答案时出现错误：'+err.message);appState.isSubmitted=false})}
+function doQuickCheck(){stopTimer();appState.isSubmitted=true;var correct=0,total=appState.questions.length;if(appState.questionMode==='single'){var input=document.getElementById('singleInput');if(input)appState.answers[appState.currentQuestionIndex]=input.value.trim();renderSingleQuestion()}else{appState.questions.forEach(function(q,idx){var userAns=(appState.answers[idx]||'').trim(),isCorrect=userAns===q.answer;if(isCorrect)correct++;var item=document.querySelector('.question-item[data-index="'+idx+'"]');if(!item)return;var icon=item.querySelector('.result-icon');if(!icon)return;var isFraction=q.type.startsWith('fraction');if(isFraction&&appState.fractionMode==='traditional'){var numInput=item.querySelector('.fraction-input[data-part="num"]'),denInput=item.querySelector('.fraction-input[data-part="den"]');if(numInput&&denInput){numInput.disabled=true;denInput.disabled=true;numInput.style.borderColor=isCorrect?'#81C784':'#E57373';denInput.style.borderColor=isCorrect?'#81C784':'#E57373';if(isCorrect)icon.innerHTML='<span class="icon-correct">✓</span>';else icon.innerHTML='<span class="icon-wrong">✗</span>';}}else{var input=item.querySelector('.answer-input');if(input){input.className='answer-input '+(isCorrect?'correct':'wrong');input.disabled=true;if(isCorrect)icon.innerHTML='<span class="icon-correct">✓</span>';else icon.innerHTML='<span class="icon-wrong">✗</span>';}}});}var finalCorrect=0;appState.questions.forEach(function(q,idx){if(appState.answers[idx]===q.answer)finalCorrect++;});document.getElementById('printScore').textContent=finalCorrect+'/'+total;showResults(finalCorrect,total);if(!appState.hasScrolledToResult){appState.hasScrolledToResult=true;document.getElementById('resultPanel').scrollIntoView({behavior:'smooth',block:'center'});}if(finalCorrect===total)startCelebration();}
+
+function detailedCheck(){OperationLock.run('check',()=>{doDetailedCheck()},(err)=>{showModal('❌ 批改失败','批改答案时出现错误：'+err.message);appState.isSubmitted=false})}
+function doDetailedCheck(){stopTimer();appState.isSubmitted=true;var correct=0,total=appState.questions.length;if(appState.questionMode==='single'){var input=document.getElementById('singleInput');if(input)appState.answers[appState.currentQuestionIndex]=input.value.trim();renderSingleQuestion()}else{appState.questions.forEach(function(q,idx){var userAns=(appState.answers[idx]||'').trim(),isCorrect=userAns===q.answer;if(isCorrect)correct++;var item=document.querySelector('.question-item[data-index="'+idx+'"]');if(!item)return;var icon=item.querySelector('.result-icon');if(!icon)return;var isFraction=q.type.startsWith('fraction');if(isFraction&&appState.fractionMode==='traditional'){var numInput=item.querySelector('.fraction-input[data-part="num"]'),denInput=item.querySelector('.fraction-input[data-part="den"]');if(numInput&&denInput){numInput.disabled=true;denInput.disabled=true;numInput.style.borderColor=isCorrect?'#81C784':'#E57373';denInput.style.borderColor=isCorrect?'#81C784':'#E57373';var ansParts=q.answer.split('/'),numCorrect=ansParts[0],denCorrect=ansParts[1];if(isCorrect)icon.innerHTML='<span class="icon-correct">✓</span>';else icon.innerHTML='<span class="icon-wrong">✗</span><div style="display:inline-flex;flex-direction:column;align-items:center;margin-left:6px;font-size:14px;vertical-align:middle"><div style="border-bottom:1px solid #333;padding-bottom:2px;font-weight:bold;color:#D32F2F">'+numCorrect+'</div><div style="font-weight:bold;color:#D32F2F">'+denCorrect+'</div></div>';}}else{var input=item.querySelector('.answer-input');if(input){input.className='answer-input '+(isCorrect?'correct':'wrong');input.disabled=true;if(isCorrect)icon.innerHTML='<span class="icon-correct">✓</span>';else icon.innerHTML='<span class="icon-wrong">✗</span><span class="correct-answer">('+escapeHtml(q.answer)+')</span>';}}});}var finalCorrect=0;appState.questions.forEach(function(q,idx){if(appState.answers[idx]===q.answer)finalCorrect++;});document.getElementById('printScore').textContent=finalCorrect+'/'+total;showResults(finalCorrect,total);if(!appState.hasScrolledToResult){appState.hasScrolledToResult=true;document.getElementById('resultPanel').scrollIntoView({behavior:'smooth',block:'center'});}if(finalCorrect===total)startCelebration();}
+
+function showSolution(){if(!appState.isSubmitted){showModal('💡 提示','请先提交或批改答案后再查看解题思路');return;}showModal('📚 解题思路','解题功能即将上线！\n\n这里将显示：\n1. 详细的解题步骤\n2. 知识点讲解\n3. 类似题型推荐\n\n敬请期待...');}
+
+        function showResults(correct,total){const percentage=Math.round((correct/total)*100);let emoji='💪',scoreClass='fail';if(percentage===100){emoji='🏆';scoreClass='perfect'}else if(percentage>=90){emoji='😊';scoreClass='good'}else if(percentage>=80){emoji='👍';scoreClass='good'}else if(percentage>=60){emoji='🌱';scoreClass='pass'}document.getElementById('scorePlaceholder').style.display='none';document.getElementById('scoreDisplay').style.display='block';document.getElementById('emojiFeedback').textContent=emoji;document.getElementById('scoreValue').className='score-value '+scoreClass;document.getElementById('scoreValue').textContent=`${correct}/${total}`;const currentTime=formatTime(appState.timer.elapsed);const totalTime=formatTime(appState.timer.totalElapsed+appState.timer.elapsed);document.getElementById('scoreDetail').textContent=`正确率：${percentage}%`;const timerStats=document.getElementById('timerStats');timerStats.style.display='inline-block';timerStats.textContent=`本次：${currentTime} | 累计：${totalTime}`}
+
+        function redoCurrent(){if(appState.timer.interval){clearInterval(appState.timer.interval);appState.timer.interval=null}appState.timer.elapsed=0;appState.timer.startTime=Date.now();startTimer();appState.answers={};appState.currentQuestionIndex=0;appState.isSubmitted=false;appState.hasScrolledToResult=false;renderQuestions();document.getElementById('scoreDisplay').style.display='none';document.getElementById('scorePlaceholder').style.display='block';document.getElementById('timerStats').style.display='none';document.getElementById('printScore').textContent='___/___';updateEncouragement()}
+
+        function startTimer(){stopTimer();appState.timer.startTime=Date.now();appState.timer.elapsed=0;appState.timer.interval=setInterval(()=>{const now=Date.now();appState.timer.elapsed=Math.floor((now-appState.timer.startTime)/1000);updateTimerDisplay()},1000)}
+
+        function stopTimer(){if(appState.timer.interval){clearInterval(appState.timer.interval);appState.timer.interval=null;appState.timer.totalElapsed+=appState.timer.elapsed}}
+
+        function updateTimerDisplay(){document.getElementById('currentTimer').textContent=formatTime(appState.timer.elapsed);document.getElementById('totalTimer').textContent=formatTime(appState.timer.totalElapsed+appState.timer.elapsed)}
+
+        function formatTime(seconds){const mins=Math.floor(seconds/60).toString().padStart(2,'0');const secs=(seconds%60).toString().padStart(2,'0');return`${mins}:${secs}`}
+
+        function updateDateTime(){
+            const now=new Date();
+            const year=now.getFullYear();
+            const month=(now.getMonth()+1).toString().padStart(2,'0');
+            const day=now.getDate().toString().padStart(2,'0');
+            const hours=now.getHours().toString().padStart(2,'0');
+            const minutes=now.getMinutes().toString().padStart(2,'0');
+            const seconds=now.getSeconds().toString().padStart(2,'0');
+            const dateStrFull=`${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}`;
+            document.getElementById('dateInput').value=dateStrFull;
+            const printDateEl=document.getElementById('printDate');
+            if(printDateEl){
+                printDateEl.textContent=dateStrFull;
+            }
+        }
+
+        function printQuestions(){const name=document.getElementById('nameInput').value||'小朋友';const originalTitle=document.title;const fileName=getTimestampedFileName(name,'竹小苗计算','pdf').replace('.pdf','');document.title=fileName;window.print();setTimeout(()=>{document.title=originalTitle},100)}
+
+        // 优化后的分享文本生成函数 - 使用在线版链接，智能判断成绩状态
+        function buildShareText() {
+            const school = document.getElementById('schoolInput').value || '';
+            const cls = document.getElementById('classInput').value || '';
+            const name = document.getElementById('nameInput').value || '小朋友';
+            
+            // 使用在线版链接，而非本地文件路径
+            const onlineUrl = 'http://120.77.43.174:9002/kousuan/';
+            
+            // 判断是否已答题（有题目且已提交）
+            const hasQuestions = appState.questions.length > 0;
+            const hasSubmitted = appState.isSubmitted;
+            const score = document.getElementById('scoreValue').textContent || '0/0';
+            const percentage = (document.getElementById('scoreDetail').innerText.match(/\d+/) || ['0'])[0];
+            
+            // 如果已答题且有成绩，分享成绩；否则分享邀请
+            if (hasQuestions && hasSubmitted && score !== '0/0') {
+                // 成绩分享模式
+                return `🎋竹小苗计算成绩分享🌱
+
+🏫 学校：${school}
+👨‍🏫 班级：${cls}
+👤 姓名：${name}
+💯 成绩：${score}
+📊 正确率：${percentage}%
+⏱️ 用时：${formatTime(appState.timer.elapsed)}
+
+✨来竹小苗计算出题机一起练习吧！🚀
+${onlineUrl}`;
+            } else {
+                // 邀请分享模式（未答题或成绩为0）
+                return `🎋竹小苗计算出题机邀请🌱
+
+👤 ${name || '我'}正在使用竹小苗计算出题机练习数学计算题~
+
+✨ 支持竖式、脱式、分数运算
+✨ 适合小学1-6年级
+✨ 可打印、可保存、可计时
+
+快来一起挑战吧！🚀
+${onlineUrl}`;
+            }
+        }
+
+        // 复制到剪贴板并显示友好提示
+        function shareToWeChat() {
+            const text = buildShareText();
+            SafeAsync.clipboard(text, '💬 内容已复制！请打开微信粘贴分享给好友或朋友圈');
+        }
+
+        function shareToDingTalk() {
+            const text = buildShareText();
+            SafeAsync.clipboard(text, '📱 内容已复制！请打开钉钉粘贴分享');
+        }
+
+        function startCelebration(){const container=document.getElementById('celebration');container.classList.remove('hidden');container.innerHTML='';const colors=['#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#03a9f4','#00bcd4','#009688','#4CAF50','#8BC34A','#CDDC39','#FFEB3B','#FFC107','#FF9800','#FF5722'];const confettiCount=Math.min(50,window.innerWidth/20);for(let i=0;i<confettiCount;i++){const confetti=document.createElement('div');confetti.className='confetti';confetti.style.left=Math.random()*100+'%';confetti.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];confetti.style.animationDelay=Math.random()*2+'s';confetti.style.borderRadius=Math.random()>0.5?'50%':'0';container.appendChild(confetti)}setTimeout(()=>{container.classList.add('hidden');container.innerHTML=''},3000)}
+
+        function initStudentSelects(){['school','class','name'].forEach(type=>{const select=document.getElementById(type+'Input');select.innerHTML='<option value="">-- 请选择或输入 --</option>';const customOpt=document.createElement('option');customOpt.value="custom";customOpt.textContent="✏️ 手动输入...";select.appendChild(customOpt)});CONFIG.studentList.schools.forEach(school=>{const option=document.createElement('option');option.value=school;option.textContent=school;document.getElementById('schoolInput').appendChild(option)});CONFIG.studentList.classes.forEach(cls=>{const option=document.createElement('option');option.value=cls;option.textContent=cls;document.getElementById('classInput').appendChild(option)});CONFIG.studentList.names.forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;document.getElementById('nameInput').appendChild(option)})}
+
+        function updateSchoolInput(select){handleCustomInput(select,'学校名称');saveStudentInfoToStorage();updatePrintHeader()}
+        function updateClassInput(select){handleCustomInput(select,'班级');saveStudentInfoToStorage();updatePrintHeader()}
+        function updateNameInput(select){handleCustomInput(select,'姓名');saveStudentInfoToStorage();updatePrintHeader()}
+
+        function handleCustomInput(select,label){if(select.value==='custom'){const custom=prompt(`请输入${label}：`);if(custom&&custom.trim()!==''){const safe=InputValidator.string(custom,50);if(!safe.valid){showModal('⚠️ 输入错误',safe.error);select.selectedIndex=0;return}let exists=false;for(let i=0;i<select.options.length;i++){if(select.options[i].value===safe.value){select.value=safe.value;exists=true;break}}if(!exists){const option=document.createElement('option');option.value=safe.value;option.textContent=safe.value;select.insertBefore(option,select.options[1]);select.value=safe.value}}else{select.selectedIndex=0}}}
+
+        function updateEncouragement(){const box=document.getElementById('encouragementBox');if(box){const random=CONFIG.encouragements[Math.floor(Math.random()*CONFIG.encouragements.length)];box.textContent=random}}
+
+        function saveAsImage(){SafeAsync.screenshot('questionCard',()=>{const name=document.getElementById('nameInput').value||'小朋友';return getTimestampedFileName(name,'竹小苗计算','png').replace('.png','')})}
+
+        window.addEventListener('beforeunload',function(e){if(appState.questions.length>0&&!appState.isSubmitted){e.preventDefault();e.returnValue='您还有未提交的答题，确定要离开吗？'}cleanupResources()});
+    
+
+// ==================== V2.2.0 新增：分享口令功能 ====================
+
+/**
+ * 分享口令编解码器
+ * 格式：VERSION(1) + COUNT(2) + RANGE(2) + DIFFICULTY(1) + NEGATIVE(1) + TYPEBITS(2) = 9位数字，转8位字母数字混合
+ */
+const ShareCode = {
+    VERSION: '1',
+    CHARS: '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', // 排除 I,O 避免混淆
+
+    encode(config) {
+        try {
+            const { questionCount, numberRange, difficulty, allowNegative, selectedCustomTypes } = config;
+
+            // 编码数量 (01-99)
+            const countCode = String(Math.min(questionCount, 99)).padStart(2, '0');
+
+            // 编码范围 (01-99)
+            const rangeVal = Math.min(numberRange, 99);
+            const rangeCode = String(rangeVal).padStart(2, '0');
+
+            // 编码难度 (0=easy, 1=medium, 2=hard)
+            const diffMap = { easy: 0, medium: 1, hard: 2 };
+            const diffCode = diffMap[difficulty] || 0;
+
+            // 编码正负模式 (0=非负, 1=允许负数)
+            const negCode = allowNegative ? 1 : 0;
+
+            // 编码题型（8种基础题型位运算）
+            const typeMap = {
+                'add': 0, 'sub': 1, 'multi': 2, 'div': 3,
+                'multiply': 4, 'divide': 5, 'mixed': 6, 'carry': 7,
+                'borrow': 0, 'remainder': 1 // 复用位，实际不会同时选
+            };
+            let typeBits = 0;
+            selectedCustomTypes.forEach(type => {
+                if (typeMap[type] !== undefined) {
+                    typeBits |= (1 << typeMap[type]);
+                }
+            });
+            const typeCode = String(typeBits).padStart(2, '0');
+
+            // 组合：版本(1) + 数量(2) + 范围(2) + 难度(1) + 负数(1) + 题型(2) = 9位
+            const rawCode = `${this.VERSION}${countCode}${rangeCode}${diffCode}${negCode}${typeCode}`;
+
+            // 转换为字母数字混合（9位转8位，更友好）
+            return this.toAlphaNumeric(rawCode);
+        } catch (e) {
+            console.error('编码失败:', e);
+            return null;
+        }
+    },
+
+    decode(code) {
+        try {
+            const numeric = this.fromAlphaNumeric(code);
+            if (!numeric || numeric.length !== 9) return null;
+
+            const version = numeric[0];
+            if (version !== this.VERSION) {
+                showModal('⚠️ 版本不兼容', '此口令由新版本生成，请更新软件后重试');
+                return null;
+            }
+
+            const questionCount = parseInt(numeric.substring(1, 3));
+            const numberRange = parseInt(numeric.substring(3, 5));
+            const difficulty = ['easy', 'medium', 'hard'][parseInt(numeric[5])] || 'medium';
+            const allowNegative = numeric[6] === '1';
+            const typeBits = parseInt(numeric.substring(7, 9));
+
+            // 解码题型
+            const typeMap = ['add', 'sub', 'multi', 'div', 'multiply', 'divide', 'mixed', 'carry'];
+            const selectedCustomTypes = [];
+            for (let i = 0; i < 8; i++) {
+                if (typeBits & (1 << i)) {
+                    selectedCustomTypes.push(typeMap[i]);
+                }
+            }
+            if (selectedCustomTypes.length === 0) selectedCustomTypes.push('add');
+
+            return {
+                questionCount,
+                numberRange,
+                difficulty,
+                allowNegative,
+                selectedCustomTypes
+            };
+        } catch (e) {
+            console.error('解码失败:', e);
+            return null;
+        }
+    },
+
+    toAlphaNumeric(numericStr) {
+        let result = '';
+        for (let i = 0; i < numericStr.length; i += 2) {
+            const pair = numericStr.substring(i, i + 2);
+            const num = parseInt(pair);
+            // 0-99 映射到 0-Z 的范围（使用 32 进制）
+            result += this.CHARS[Math.floor(num / 32)] + this.CHARS[num % 32];
+        }
+        return result.substring(0, 8); // 确保8位
+    },
+
+    fromAlphaNumeric(alphaStr) {
+        let result = '';
+        alphaStr = alphaStr.toUpperCase();
+        for (let i = 0; i < alphaStr.length; i += 2) {
+            const c1 = this.CHARS.indexOf(alphaStr[i]);
+            const c2 = this.CHARS.indexOf(alphaStr[i + 1]);
+            if (c1 === -1 || c2 === -1) return null;
+            const num = c1 * 32 + c2;
+            result += String(num).padStart(2, '0');
+        }
+        return result;
+    }
+};
+
+function generateShareCode() {
+    const config = {
+        questionCount: appState.questionCount,
+        numberRange: appState.numberRange,
+        difficulty: appState.difficulty,
+        allowNegative: appState.allowNegative,
+        selectedCustomTypes: appState.selectedCustomTypes
+    };
+
+    const code = ShareCode.encode(config);
+    if (!code) {
+        showModal('❌ 生成失败', '配置编码失败，请检查设置');
+        return;
+    }
+
+    const display = document.getElementById('shareCodeDisplay');
+    display.textContent = code;
+    display.style.display = 'block';
+    display.classList.remove('code-success');
+
+    setTimeout(() => copyShareCode(), 100);
+}
+
+function copyShareCode() {
+    const display = document.getElementById('shareCodeDisplay');
+    const code = display.textContent;
+    if (!code || code === '--------') return;
+
+    navigator.clipboard.writeText(code).then(() => {
+        display.classList.add('code-success');
+        display.setAttribute('data-original', code);
+        display.textContent = '已复制!';
+
+        showModal('✅ 复制成功', `口令 ${code} 已复制到剪贴板，快去分享吧！`);
+
+        setTimeout(() => {
+            display.textContent = display.getAttribute('data-original');
+            display.classList.remove('code-success');
+        }, 2000);
+    }).catch(() => {
+        // 降级方案
+        const input = document.createElement('input');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showModal('✅ 复制成功', `口令 ${code} 已复制（兼容模式）`);
+    });
+}
+
+function validateCodeInput(input) {
+    input.value = input.value.toUpperCase().replace(/[^0-9A-HJ-NP-Z]/g, '').slice(0, 8);
+}
+
+function applyShareCode() {
+    const input = document.getElementById('shareCodeInput');
+    const code = input.value.trim().toUpperCase();
+
+    if (code.length !== 8) {
+        showModal('⚠️ 口令格式错误', '请输入8位字母数字混合口令（不含I和O）');
+        return;
+    }
+
+    const config = ShareCode.decode(code);
+    if (!config) {
+        showModal('❌ 无效口令', '口令格式错误或已损坏，请检查输入');
+        return;
+    }
+
+    // 应用配置
+    appState.questionCount = config.questionCount;
+    appState.numberRange = config.numberRange;
+    appState.difficulty = config.difficulty;
+    appState.allowNegative = config.allowNegative;
+    appState.selectedCustomTypes = config.selectedCustomTypes;
+    appState.currentTab = 'custom';
+
+    // 更新 UI
+    updateUIFromState();
+
+    input.classList.add('code-success');
+    setTimeout(() => input.classList.remove('code-success'), 1000);
+
+    const diffText = {easy: '初入江湖', medium: '小有成就', hard: '身手不凡'}[config.difficulty];
+    const typeText = config.selectedCustomTypes.map(t => {
+        const map = {'add':'加法','sub':'减法','multi':'连加','div':'连减','multiply':'乘法','divide':'除法','mixed':'混合','carry':'进位'};
+        return map[t] || t;
+    }).join('、');
+
+    showModal('✅ 配置已加载', 
+        `已自动配置：${config.questionCount}题 / 范围1-${config.numberRange} / ${diffText}\n` +
+        `题型：${typeText}\n\n点击"出题"即可开始练习！`
+    );
+
+    input.value = '';
+}
+
+function updateUIFromState() {
+    document.getElementById('questionCountInput').value = appState.questionCount;
+    document.getElementById('numberRangeInput').value = appState.numberRange;
+
+    document.querySelectorAll('.selector-btn.easy, .selector-btn.medium, .selector-btn.hard').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.selector-btn.${appState.difficulty}`).classList.add('active');
+
+    document.getElementById('btn-positive').classList.toggle('active', !appState.allowNegative);
+    document.getElementById('btn-negative').classList.toggle('active', appState.allowNegative);
+
+    document.querySelectorAll('.checkbox-item[data-type]').forEach(el => {
+        el.classList.remove('selected');
+        const checkbox = el.querySelector('input');
+        if (checkbox) checkbox.checked = false;
+    });
+
+    appState.selectedCustomTypes.forEach(type => {
+        const el = document.querySelector(`.checkbox-item[data-type="${type}"]`);
+        if (el) {
+            el.classList.add('selected');
+            const checkbox = el.querySelector('input');
+            if (checkbox) checkbox.checked = true;
+        }
+    });
+
+    switchTab('custom');
+}
+
+// 页面加载时检查 URL 参数中的口令
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+        document.getElementById('shareCodeInput').value = code;
+        setTimeout(() => applyShareCode(), 800);
+    }
+});
+
+
+    </script>
+</body>
+</html>
